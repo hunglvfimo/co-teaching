@@ -257,7 +257,7 @@ def run_coteaching():
 		adjust_learning_rate(optimizer2, alpha_plan, beta1_plan, epoch)
 
 		train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2 = \
-			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule[epoch], cuda)
+			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule, epoch, cuda)
 
 		if epoch % args.eval_freq == 0:
 			test_loss_1, test_loss_2, test_acc_1, test_acc_2 = \
