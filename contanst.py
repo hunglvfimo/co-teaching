@@ -18,7 +18,7 @@ NUM_SAR_8A = np.array([1587.0, 11.0, 7.0, 136.0, 4.0, 6, 231.0, 41.0])
 
 MEAN_VAIS_RGB = [0.3276, 0.4221, 0.5979]
 STD_VAIS_RGB = [0.2144, 0.2404, 0.2955]
-CLASSES_VAIS_RGB = ['cargo', 'medium-other', 'passenger', 'sailing', 'small', 'tug']
+CLASSES_VAIS_RGB = ['0', '1', '2', '3', '4', '5']
 NUM_VAIS_RGB = np.array([100, 99, 78, 203, 323, 37])
 
 MEAN_G_FLOOD = (0.4791, 0.4798, 0.4630)
@@ -33,5 +33,5 @@ NUM_MEDEVAL17 = np.array([1728, 3042])
 
 MEAN_VAIS_IRRGB2 = [0.4482, 0.4993, 0.5944]
 STD_VAIS_IRRGB2 = [0.2797, 0.2697, 0.2629]
-CLASSES_VAIS_IRRGB2 = ['cargo', 'medium-other', 'passenger', 'sailing', 'small', 'tug']
+CLASSES_VAIS_IRRGB2 = ['0', '1', '2', '3', '4', '5']
 NUM_VAIS_IRRGB2 = np.array([183, 161, 136, 351, 474, 67])

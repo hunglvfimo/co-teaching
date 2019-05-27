@@ -267,8 +267,17 @@ def run_coteaching():
 				% (epoch + 1, args.n_epoch, train_loss_1, total_train_loss_1, train_loss_2, total_train_loss_2, test_acc_1, test_acc_2, test_loss_1, test_loss_2))
 
 		if epoch % args.save_freq == 0:
-			torch.save(model1.state_dict(), os.path.join(MODEL_DIR, '%s_%s_%.2f_1_%d.pth' % (args.dataset, args.loss_fn, args.keep_rate, epoch)))
-			torch.save(model2.state_dict(), os.path.join(MODEL_DIR, '%s_%s_%.2f_2_%d.pth' % (args.dataset, args.loss_fn, args.keep_rate, epoch)))
+			torch.save({
+						'model_state_dict': model1.state_dict(),
+						'optimizer_state_dict': optimizer1.state_dict(),
+						'epoch': epoch
+						}, os.path.join(MODEL_DIR, '%s_%s_%.2f_1_%d.pth' % (args.dataset, args.loss_fn, args.keep_rate, epoch)))
+			
+			torch.save({
+						'model_state_dict': model2.state_dict(),
+						'optimizer_state_dict': optimizer2.state_dict(),
+						'epoch': epoch
+						}, os.path.join(MODEL_DIR, '%s_%s_%.2f_2_%d.pth' % (args.dataset, args.loss_fn, args.keep_rate, epoch)))
 
 	# visualize training log
 	train_log = np.array(train_log)
