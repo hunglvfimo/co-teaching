@@ -56,7 +56,7 @@ args = parser.parse_args()
 
 cuda = torch.cuda.is_available()
 # Set up data loaders parameters
-kwargs = {'num_workers': 4, 'pin_memory': True} if cuda else {} #
+kwargs = {'num_workers': 0, 'pin_memory': True} if cuda else {} #
 
 # Seed
 torch.manual_seed(args.seed)
@@ -79,6 +79,11 @@ if args.dataset == 'VAIS_RGB':
 	dataset_std = STD_VAIS_RGB
 	classes = CLASSES_VAIS_RGB
 	classes_num = NUM_VAIS_RGB
+if args.dataset == 'VAIS_IRRGB2':
+	dataset_mean = MEAN_VAIS_IRRGB2
+	dataset_std = STD_VAIS_IRRGB2
+	classes = CLASSES_VAIS_IRRGB2
+	classes_num = NUM_VAIS_IRRGB2
 if args.dataset == "G_FLOOD":
 	dataset_mean = MEAN_G_FLOOD
 	dataset_std = STD_G_FLOOD
@@ -167,22 +172,16 @@ def run_coeval():
 		print(confusion_matrix(labels, preds))
 
 def run_coteaching():
-	transforms_args = []
+	augment_transform_args = []
 	if args.augment:
-		transforms_args.append(transforms.RandomCrop(512))
-		transforms_args.append(transforms.RandomHorizontalFlip())
-		transforms_args.append(transforms.RandomVerticalFlip())
-		transforms_args.append(transforms.RandomPerspective())
-		transforms_args.append(transforms.RandomRotation(20))
-		transforms_args.append(transforms.ColorJitter(hue=.05, saturation=.05))
-	if not args.input_size == -1:
-		transforms_args.append(transforms.Resize((args.input_size, args.input_size)))
+		augment_transform_args = [transforms.RandomCrop(512), transforms.RandomHorizontalFlip(),
+								transforms.RandomVerticalFlip(), transforms.RandomPerspective(),
+								transforms.RandomRotation(20), transforms.ColorJitter(hue=.05, saturation=.05)]
 	
-	transforms_args.append(transforms.ToTensor())
-	transforms_args.append(transforms.Normalize(dataset_mean, dataset_std))
+	transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std)]
 
 	train_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "train"),
-							transform=transforms.Compose(transforms_args))
+							transform=transforms.Compose(augment_transform_args + transforms_args))
 
 	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
 							transform=transforms.Compose(transforms_args))

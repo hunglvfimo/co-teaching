@@ -30,3 +30,8 @@ MEAN_MEDEVAL17 = (0.4589, 0.4623, 0.4339)
 STD_MEDEVAL17 = (0.2455, 0.2466, 0.2756)
 CLASSES_MEDEVAL17 = ['flood', 'non-flood']
 NUM_MEDEVAL17 = np.array([1728, 3042])
+
+MEAN_VAIS_IRRGB2 = [0.4482, 0.4993, 0.5944]
+STD_VAIS_IRRGB2 = [0.2797, 0.2697, 0.2629]
+CLASSES_VAIS_IRRGB2 = ['cargo', 'medium-other', 'passenger', 'sailing', 'small', 'tug']
+NUM_VAIS_IRRGB2 = np.array([183, 161, 136, 351, 474, 67])
