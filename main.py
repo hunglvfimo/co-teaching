@@ -74,6 +74,7 @@ if args.dataset == 'SAR_4L':
 	dataset_std = STD_SAR_4L
 	classes = CLASSES_SAR_4L
 	classes_num = NUM_SAR_4L
+
 if args.dataset == 'VAIS_RGB':
 	dataset_mean = MEAN_VAIS_RGB
 	dataset_std = STD_VAIS_RGB
@@ -84,6 +85,12 @@ if args.dataset == 'VAIS_IRRGB2':
 	dataset_std = STD_VAIS_IRRGB2
 	classes = CLASSES_VAIS_IRRGB2
 	classes_num = NUM_VAIS_IRRGB2
+if args.dataset == 'VAIS_IR':
+	dataset_mean = MEAN_VAIS_IR
+	dataset_std = STD_VAIS_IR
+	classes = CLASSES_VAIS_IR
+	classes_num = NUM_VAIS_IR
+
 if args.dataset == "G_FLOOD":
 	dataset_mean = MEAN_G_FLOOD
 	dataset_std = STD_G_FLOOD
@@ -249,9 +256,8 @@ def run_coteaching():
 		# TODO: Implement CoTeachingTripletLossPlus
 		loss_fn = CoTeachingTripletLoss(margin=TRIPLET_MARGIN)
 
-	epoch = 0
 	train_log = []
-	for epoch in range(1, args.n_epoch):
+	for epoch in range(1, args.n_epoch + 1):
 		adjust_learning_rate(optimizer1, alpha_plan, beta1_plan, epoch)
 		adjust_learning_rate(optimizer2, alpha_plan, beta1_plan, epoch)
 
@@ -264,7 +270,7 @@ def run_coteaching():
 			
 			train_log.append([train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2, test_loss_1, test_loss_2])
 			print('Epoch [%d/%d], Train loss1: %.4f/%.4f, Train loss2: %.4f/%.4f, Test accuracy1: %.4F, Test accuracy2: %.4f, Test loss1: %.4f, Test loss2: %.4f' 
-				% (epoch + 1, args.n_epoch, train_loss_1, total_train_loss_1, train_loss_2, total_train_loss_2, test_acc_1, test_acc_2, test_loss_1, test_loss_2))
+				% (epoch, args.n_epoch, train_loss_1, total_train_loss_1, train_loss_2, total_train_loss_2, test_acc_1, test_acc_2, test_loss_1, test_loss_2))
 
 		if epoch % args.save_freq == 0:
 			torch.save({
