@@ -174,7 +174,9 @@ def run_copredict(topk=30):
 			topk_ind = sorted_logit_ind[:topk, i]
 
 			# visualize top-k prediction
-			visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind, i], os.path.join(RESULT_DIR, "%s_%s.png" % (args.dataset, label)), title=label)
+			visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind, i],
+							os.path.join(RESULT_DIR, "%s_%s_%s.png" % (args.dataset, args.model1_name, label)),
+							title=label)
 
 def run_coeval():
 	if args.input_size == -1:
