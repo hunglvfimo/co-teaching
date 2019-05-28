@@ -10,14 +10,15 @@ def visualize_images(filepaths, probs, figure_path, title=None):
 
     fig = plt.figure()
     for i, (filepath, prob) in enumerate(zip(filepaths, probs)):
-        ax = plt.subplot(num_images // 2, 2, i + 1)
+        ax = plt.subplot(num_images // 5, 5, i + 1)
         ax.axis('off')
-        ax.set_title('score: {}'.format(prob))
+        ax.set_title('score: %.3f' % prob)
         
         img = Image.open(filepath).convert('RGB')
         plt.imshow(img)
     
     if title is not None:
-        plt.title(title)
-    plt.savefig(figure_path)
+        plt.suptitle(title)
+    plt.tight_layout()
+    plt.savefig(figure_path, dpi=600)
 

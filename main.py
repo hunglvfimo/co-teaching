@@ -2,6 +2,7 @@ import numpy as np
 import argparse, sys
 
 import torch
+import torch.nn.functional as F
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
 from torch.utils.data import DataLoader
@@ -128,7 +129,7 @@ def run_coeval_triplet():
 	# TODO
 	pass
 
-def run_copredict(topk=10):
+def run_copredict(topk=30):
 	if args.input_size == -1:
 		# do not resize image. should use with SPP layer
 		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
@@ -160,8 +161,8 @@ def run_copredict(topk=10):
 			if cuda:
 				data = tuple(d.cuda() for d in data)
 	        
-			logit_1[k: k + len(data[0])] = model1(*data).data.cpu().numpy()
-			logit_2[k: k + len(data[0])] = model2(*data).data.cpu().numpy()
+			logit_1[k: k + len(data[0])] = F.softmax(model1(*data), dim=-1).data.cpu().numpy()
+			logit_2[k: k + len(data[0])] = F.softmax(model2(*data), dim=-1).data.cpu().numpy()
 
 			k += len(data[0])
 
@@ -173,7 +174,7 @@ def run_copredict(topk=10):
 			topk_ind = sorted_logit_ind[:topk, i]
 
 			# visualize top-k prediction
-			visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind], os.path.join(RESULT_DIR, "%s.png" % args.model1_name), title=label)
+			visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind, i], os.path.join(RESULT_DIR, "%s_%s.png" % (args.dataset, label)), title=label)
 
 def run_coeval():
 	if args.input_size == -1:
