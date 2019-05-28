@@ -20,12 +20,15 @@ from losses import FocalLoss, CoTeachingTripletLoss, CoTeachingLoss, CoTeachingL
 from selectors import HardestNegativeTripletSelector, RandomNegativeTripletSelector, SemihardNegativeTripletSelector
 from trainer import fit, train_coteaching, eval_coteaching
 from scheduler import adjust_learning_rate
+from dataset import NoLabelFolder
+from visualization import visualize_images
 from contanst import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=1)
-parser.add_argument('--train', help='Multualy exclusive with --test. If --model_name1 and --model_name2 are specified, finetuning these model.', action='store_true')
-parser.add_argument('--test', help='Multualy exclusive with --train.', action='store_true')
+parser.add_argument('--train', help='Multualy exclusive with --test, --predict. If --model_name1 and --model_name2 are specified, finetuning these model.', action='store_true')
+parser.add_argument('--test', help='Multualy exclusive with --train, --predict.', action='store_true')
+parser.add_argument('--predict', help='Multualy exclusive with --train, --test.', action='store_true')
 # dataset params
 parser.add_argument('--dataset', type=str, help='SAR_8A, SAR_4L, VAIS_RGB, VAIS_IR, VAIS_IR_RGB, ...', default='SAR_8A')
 parser.add_argument('--input_size', type=int, help='Resize input image to input_size. If -1, images is in original size (should be use with SPP layer)', default=112)
@@ -102,6 +105,12 @@ if args.dataset == "MedEval17":
 	classes = CLASSES_MEDEVAL17
 	classes_num = NUM_MEDEVAL17
 
+if args.dataset == "SendaiSNS":
+	dataset_mean = MEAN_SendaiSNS
+	dataset_std = STD_SendaiSNS
+	classes = CLASSES_SendaiSNS
+	classes_num = NUM_SendaiSNS
+
 n_classes = len(classes)
 
 classes_weights = None
@@ -110,6 +119,61 @@ if args.use_classes_weight:
 	classes_weights = torch.from_numpy(classes_weights).float()
 	if cuda:
 		classes_weights = classes_weights.cuda()
+
+def run_copredict_triplet():
+	# TODO
+	pass
+
+def run_coeval_triplet():
+	# TODO
+	pass
+
+def run_copredict(topk=10):
+	if args.input_size == -1:
+		# do not resize image. should use with SPP layer
+		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
+	else:
+		transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
+	test_dataset = NoLabelFolder(os.path.join(DATA_DIR, args.dataset, "test"),
+							transform=transforms.Compose(transforms_args))
+
+	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
+
+	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
+	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
+	if cuda:
+		model1.cuda()
+		model2.cuda()
+	
+	# test
+	with torch.no_grad():
+		model1.eval()
+		model2.eval()
+
+		logit_1 = np.zeros((len(test_loader.dataset), n_classes))
+		logit_2 = np.zeros((len(test_loader.dataset), n_classes))
+
+		k = 0
+		for data in test_loader:
+			if not type(data) in (tuple, list):
+				data = (data,)
+			if cuda:
+				data = tuple(d.cuda() for d in data)
+	        
+			logit_1[k: k + len(data[0])] = model1(*data).data.cpu().numpy()
+			logit_2[k: k + len(data[0])] = model2(*data).data.cpu().numpy()
+
+			k += len(data[0])
+
+		logit = np.maximum(logit_1, logit_2)
+
+		sorted_logit_ind = np.argsort(logit, axis=0)[::-1] # sorted in descendent order
+		for i, label in enumerate(classes):
+			print("--------Top %d samples predicted as %s--------" % (topk, label))
+			topk_ind = sorted_logit_ind[:topk, i]
+
+			# visualize top-k prediction
+			visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind], os.path.join(RESULT_DIR, "%s.png" % args.model1_name), title=label)
 
 def run_coeval():
 	if args.input_size == -1:
@@ -120,19 +184,7 @@ def run_coeval():
 	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
 							transform=transforms.Compose(transforms_args))
 
-	test_batch_sampler = None
-	if args.batch_sampler == "balanced":
-		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
-													n_samples=args.batch_size // n_classes, 
-													n_batches=50, training=False)
-	if test_batch_sampler is not None:
-		test_loader = DataLoader(test_dataset, batch_sampler=test_batch_sampler, **kwargs)
-	else:
-		test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
-
-	return_embedding = False
-	if args.loss_fn == "co_teaching_triplet" or args.loss_fn == "co_teaching_triplet+": # metric learning
-		return_embedding = True # CNN return embedding instead of logit
+	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
 
 	model1 = load_model(args.backbone, n_classes, return_embedding, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, return_embedding, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
@@ -301,5 +353,7 @@ if __name__ == '__main__':
 		run_coteaching()
 	elif args.test:
 		run_coeval()
+	elif args.predict:
+		run_copredict()
 	else:
-		print("Please specify --train, --test (mutualy exclusive).")
+		print("Please specify --train, --test, --predict (mutualy exclusive).")

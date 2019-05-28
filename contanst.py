@@ -5,6 +5,7 @@ TRIPLET_MARGIN = 0.1
 
 DATA_DIR = os.path.join('..', '..', 'data', 'processed')
 MODEL_DIR = os.path.join('..', '..', 'models')
+RESULT_DIR = os.path.join('..', '..', 'results')
 
 # ------------OpenSARShip------------------
 MEAN_SAR_4L = (0.0625, 0.0625, 0.0625)
@@ -44,3 +45,7 @@ STD_MEDEVAL17 = (0.2455, 0.2466, 0.2756)
 CLASSES_MEDEVAL17 = ['flood', 'non-flood']
 NUM_MEDEVAL17 = np.array([1728, 3042])
 
+MEAN_SendaiSNS = MEAN_MEDEVAL17
+STD_SendaiSNS = STD_MEDEVAL17
+CLASSES_SendaiSNS = ['flood', 'non-flood']
+NUM_SendaiSNS = NUM_MEDEVAL17
