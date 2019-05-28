@@ -189,8 +189,8 @@ def run_coeval():
 
 	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
 
-	model1 = load_model(args.backbone, n_classes, return_embedding, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
-	model2 = load_model(args.backbone, n_classes, return_embedding, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
+	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
+	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
 	if cuda:
 		model1.cuda()
 		model2.cuda()
