@@ -339,7 +339,7 @@ def run_coteaching():
 			plt.ylabel('loss')
 			plt.xlabel('epochs')
 			plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
-			plt.close()
+			plt.clf()
 
 if __name__ == '__main__':
 	if args.train:
