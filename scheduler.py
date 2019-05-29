@@ -29,7 +29,7 @@ class LrScheduler(object):
 def adjust_batch_size(data_loader, epoch):
 	if epoch < 30:
 		data_loader.n_samples = 5
-		data_loader.n_batches = 2700
+		data_loader.n_batches = 675
 	else:
 		data_loader.n_samples = 6
-		data_loader.n_batches = 1500
+		data_loader.n_batches = 375
