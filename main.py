@@ -33,7 +33,7 @@ parser.add_argument('--predict', help='Multualy exclusive with --train, --test.'
 # dataset params
 parser.add_argument('--dataset', type=str, help='SAR_8A, SAR_4L, VAIS_RGB, VAIS_IR, VAIS_IR_RGB, ...', default='SAR_8A')
 parser.add_argument('--input_size', type=int, help='Resize input image to input_size. If -1, images is in original size (should be use with SPP layer)', default=112)
-parser.add_argument('--augment', help='Add data augmentation to training', action='store_false')
+parser.add_argument('--augment', help='Add data augmentation to training', action='store_true')
 # model params
 parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', default='co_teaching')
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
@@ -45,7 +45,7 @@ parser.add_argument('--num_gradual', type=int, default = 10, help='how many epoc
 parser.add_argument('--exponent', type = float, default = 1, help='exponent of the forget rate, can be 0.5, 1, 2. This parameter is equal to c in Tc for R(T) in Co-teaching paper.')
 # training params
 parser.add_argument('--lr', type = float, default = 1e-5)
-parser.add_argument('--eval_freq', type=int, default=5)
+parser.add_argument('--eval_freq', type=int, default=10)
 parser.add_argument('--save_freq', type=int, default=10)
 parser.add_argument('--n_epoch', type=int, default=50)
 parser.add_argument('--epoch_decay_start', type=int, default=20)
@@ -332,13 +332,13 @@ def run_coteaching():
 						'model_state_dict': model1.state_dict(),
 						'optimizer_state_dict': optimizer1.state_dict(),
 						'epoch': epoch
-						}, os.path.join(MODEL_DIR, '%s_%s_%.2f_1_%d.pth' % (args.dataset, args.loss_fn, args.keep_rate, epoch)))
+						}, os.path.join(MODEL_DIR, '%s_%s_%s_%.2f_1_%d.pth' % (args.dataset, args.backbone, args.loss_fn, args.keep_rate, epoch)))
 			
 			torch.save({
 						'model_state_dict': model2.state_dict(),
 						'optimizer_state_dict': optimizer2.state_dict(),
 						'epoch': epoch
-						}, os.path.join(MODEL_DIR, '%s_%s_%.2f_2_%d.pth' % (args.dataset, args.loss_fn, args.keep_rate, epoch)))
+						}, os.path.join(MODEL_DIR, '%s_%s_%s_%.2f_2_%d.pth' % (args.dataset, args.backbone, args.loss_fn, args.keep_rate, epoch)))
 
 	# visualize training log
 	train_log = np.array(train_log)
