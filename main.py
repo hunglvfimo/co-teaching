@@ -19,7 +19,7 @@ from models import load_model
 from samplers import BalancedBatchSampler
 from losses import *
 from trainer import fit, train_coteaching, eval_coteaching
-from scheduler import LrScheduler
+from scheduler import LrScheduler, adjust_batch_size
 from dataset import NoLabelFolder
 from visualization import visualize_images
 from contanst import *
@@ -264,8 +264,7 @@ def run_coteaching():
 	if args.batch_sampler == "balanced":
 		train_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
 												n_samples=args.batch_size // n_classes,
-												# n_batches=len(train_dataset.targets) * n_classes // args.batch_size,
-												n_batches=10,)
+												n_batches=len(train_dataset.targets) * n_classes // args.batch_size,)
 		
 		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
 													n_samples=args.batch_size // n_classes, 
@@ -301,11 +300,10 @@ def run_coteaching():
 
 	train_log = []
 	for epoch in range(1, args.n_epoch + 1):
-		if epoch == 2:
-			train_batch_sampler.n_samples = train_batch_sampler.n_samples * 2
-
 		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1)
 		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1)
+
+		adjust_batch_size(train_batch_sampler, epoch)
 
 		train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2 = \
 			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule, epoch, cuda)

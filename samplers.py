@@ -16,6 +16,7 @@ class BalancedBatchSampler(BatchSampler):
         
         self.n_samples = n_samples
         self.n_batches = n_batches
+        
         self.training = training
         
         self.labels = labels.numpy()
