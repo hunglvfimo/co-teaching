@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 
+from torchsummary import summary
+
 from networks import ResNet, CoTeachingCNN
 from layers import Bottleneck, BasicBlock
 from contanst import *
@@ -69,3 +71,10 @@ def load_model(backbone, t_n_classes, return_embedding, pt_model_name=None, pt_n
 			model.fc = nn.Linear(num_ftrs, n_classes)
 	
 	return model
+
+if __name__ == '__main__':
+	device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+	debug_model = load_model("ResNet18", 2, True, pt_model_name=None, pt_n_classes=1000).to(device)
+
+	summary(debug_model, (3, 32, 32))

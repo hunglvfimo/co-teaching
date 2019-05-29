@@ -7,8 +7,6 @@ import torch.optim as optim
 
 from layers import *
 
-from torchsummary import summary
-
 class ResNet(nn.Module):
     def __init__(self, block, layers, num_classes=512, return_embedding=False):
         self.return_embedding = return_embedding
@@ -56,11 +54,11 @@ class ResNet(nn.Module):
 
     def forward(self, x):
         x = self.get_embedding(x)
-
+        if self.return_embedding:
+            return x
+        
         logit = self.fc(x)
-
-        if self.return_embedding: return logit, x
-        else: return logit
+        return logit
     
     def get_embedding(self, x):
         # x = self.bn0(x)
@@ -114,12 +112,12 @@ class CoTeachingCNN(nn.Module):
         self.bn8=nn.BatchNorm2d(256)
         self.bn9=nn.BatchNorm2d(128)
 
-    def forward(self, x,):
-        h = self.get_embedding(x)
+    def forward(self, x):
+        x = self.get_embedding(x)
         if self.return_embedding: 
-            return h
+            return x
         
-        logit = self.l_c1(h)
+        logit = self.l_c1(x)
         return logit
 
     def get_embedding(self, x,):
@@ -153,11 +151,3 @@ class CoTeachingCNN(nn.Module):
         h = self.flatten(h)
 
         return h
-
-if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # debug_model = CoTeachingCNN().to(device)
-    debug_model = ResNet(Bottleneck, [3, 4, 6, 3]).to(device)
-
-    summary(debug_model, (3, 32, 32))
