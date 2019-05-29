@@ -287,8 +287,8 @@ def run_coteaching():
 		model1.cuda()
 		model2.cuda()
 	
-	optimizer1 = optim.Adam(model1.parameters(), lr=args.lr, momentum=0.9)
-	optimizer2 = optim.Adam(model2.parameters(), lr=args.lr, momentum=0.9)
+	optimizer1 = optim.Adam(model1.parameters(), lr=args.lr)
+	optimizer2 = optim.Adam(model2.parameters(), lr=args.lr)
 
 	if args.loss_fn == "co_teaching":
 		print("Training using CoTeachingLoss")
