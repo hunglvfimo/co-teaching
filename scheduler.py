@@ -12,11 +12,14 @@ class LrScheduler(object):
 
 	def adjust_learning_rate(optimizer, epoch):
 		if epoch < self.epoch_decay_start:
-			lr = self.lr
+			# lr = self.lr
 			beta1 = self.mom1
 		else:
-			lr = float(self.n_epoch - epoch) / (self.n_epoch - self.epoch_decay_start) * self.lr
+			# lr = float(self.n_epoch - epoch) / (self.n_epoch - self.epoch_decay_start) * self.lr
 			beta1 = self.mom2
+
+		if epoch == 30 or epoch == 60 or epoch == 80:
+			lr = lr / 10.0
 
 		for param_group in optimizer.param_groups:
 			param_group['lr'] = lr
