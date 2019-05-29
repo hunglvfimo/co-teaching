@@ -265,7 +265,7 @@ def run_coteaching():
 		train_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
 												n_samples=args.batch_size // n_classes,
 												# n_batches=len(train_dataset.targets) * n_classes // args.batch_size,
-												n_batches=1000,)
+												n_batches=10,)
 		
 		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
 													n_samples=args.batch_size // n_classes, 
@@ -301,6 +301,9 @@ def run_coteaching():
 
 	train_log = []
 	for epoch in range(1, args.n_epoch + 1):
+		if epoch == 2:
+			train_batch_sampler.n_samples = train_batch_sampler.n_samples * 2
+
 		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1)
 		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1)
 
@@ -328,17 +331,17 @@ def run_coteaching():
 						'epoch': epoch
 						}, os.path.join(MODEL_DIR, '%s_%s_%s_%.2f_2_%d.pth' % (args.dataset, args.backbone, args.loss_fn, args.keep_rate, epoch)))
 
-		# visualize training log
-		train_log_data = np.array(train_log)
-		legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
-		epoch_count = range(1, train_log_data.shape[0] + 1)
-		for i in range(len(legends)):
-			plt.plot(epoch_count, train_log_data[:, i])
-		plt.legend(legends)
-		plt.ylabel('loss')
-		plt.xlabel('epochs')
-		plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
-		plt.close()
+			# visualize training log
+			train_log_data = np.array(train_log)
+			legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
+			epoch_count = range(1, train_log_data.shape[0] + 1)
+			for i in range(len(legends)):
+				plt.loglog(epoch_count, train_log_data[:, i])
+			plt.legend(legends)
+			plt.ylabel('loss')
+			plt.xlabel('epochs')
+			plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
+			plt.close()
 
 if __name__ == '__main__':
 	if args.train:
