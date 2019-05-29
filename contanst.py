@@ -23,7 +23,7 @@ CLASSES_VAIS_RGB = ['cargo', 'medium-other', 'passenger', 'sailing', 'small', 't
 NUM_VAIS_RGB = np.array([100, 99, 78, 203, 323, 37])
 
 MEAN_VAIS_IR = [0.6847, 0.6847, 0.6847]
-STD_VAIS_IR = [0.2103, 0.2103, 0.2103]
+STD_VAIS_IR = [0.2105, 0.2105, 0.2105]
 CLASSES_VAIS_IR = ['cargo', 'medium-other', 'passenger', 'sailing', 'small', 'tug']
 NUM_VAIS_IR = np.array([83, 62, 58, 148, 151, 30])
 
