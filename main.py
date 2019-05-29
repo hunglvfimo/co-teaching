@@ -19,7 +19,7 @@ from models import load_model
 from samplers import BalancedBatchSampler
 from losses import *
 from trainer import fit, train_coteaching, eval_coteaching
-from scheduler import adjust_learning_rate
+from scheduler import LrScheduler
 from dataset import NoLabelFolder
 from visualization import visualize_images
 from contanst import *
@@ -45,12 +45,12 @@ parser.add_argument('--exponent', type = float, default = 1, help='exponent of t
 # triplet params
 parser.add_argument('--soft_margin', help='Use soft margin.', action='store_true')
 # training params
-parser.add_argument('--lr', type = float, default = 1e-5)
+parser.add_argument('--lr', type = float, default=3.0)
+parser.add_argument('--n_epoch', type=int, default=100)
+parser.add_argument('--epoch_decay_start', type=int, default=30)
+parser.add_argument('--batch_size', type=int, default=36)
 parser.add_argument('--eval_freq', type=int, default=10)
 parser.add_argument('--save_freq', type=int, default=10)
-parser.add_argument('--n_epoch', type=int, default=50)
-parser.add_argument('--epoch_decay_start', type=int, default=20)
-parser.add_argument('--batch_size', type=int, default=8)
 # test/finetuning params
 parser.add_argument('--model1_name', type=str, help='Name of trained model 1. Default dir: MODEL_DIR', default="")
 parser.add_argument('--model1_numclasses', type=int, default=365)
@@ -253,15 +253,6 @@ def run_coteaching():
 	rate_schedule = np.ones(args.n_epoch) * args.keep_rate
 	rate_schedule[:args.num_gradual] = np.linspace(1.0, args.keep_rate**args.exponent, args.num_gradual)
 
-	# Adjust learning rate and betas for Adam Optimizer
-	mom1 = 0.9
-	mom2 = 0.1
-	alpha_plan = [args.lr] * args.n_epoch
-	beta1_plan = [mom1] * args.n_epoch
-	for i in range(args.epoch_decay_start, args.n_epoch):
-		alpha_plan[i] = float(args.n_epoch - i) / (args.n_epoch - args.epoch_decay_start) * args.lr
-		beta1_plan[i] = mom2
-
 	return_embedding = False
 	metric_acc = True
 	if args.loss_fn == "co_teaching_triplet" or args.loss_fn == "co_teaching_triplet+": # metric learning
@@ -273,14 +264,14 @@ def run_coteaching():
 	if args.batch_sampler == "balanced":
 		train_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
 												n_samples=args.batch_size // n_classes,
-												n_batches=len(train_dataset.targets) * n_classes // args.batch_size)
+												n_batches=len(train_dataset.targets) * n_classes // args.batch_size,)
 		
 		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
 													n_samples=args.batch_size // n_classes, 
-													n_batches=50, training=False)
+													n_batches=100, training=False)
 		
 	if train_batch_sampler is not None:
-		train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler,**kwargs)
+		train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler, **kwargs)
 	else:
 		train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs) # default
 	
@@ -295,8 +286,8 @@ def run_coteaching():
 		model1.cuda()
 		model2.cuda()
 	
-	optimizer1 = optim.Adam(model1.parameters(), lr=args.lr)
-	optimizer2 = optim.Adam(model2.parameters(), lr=args.lr)
+	optimizer1 = optim.Adam(model1.parameters(), lr=args.lr, momentum=0.9)
+	optimizer2 = optim.Adam(model2.parameters(), lr=args.lr, momentum=0.9)
 
 	if args.loss_fn == "co_teaching":
 		print("Training using CoTeachingLoss")
@@ -305,11 +296,12 @@ def run_coteaching():
 		print("Training using CoTeachingTripletLoss")		
 		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin)
 
+	lr_scheduler = LrScheduler(args.epoch_decay_start, args.n_epoch, args.lr)
 
 	train_log = []
 	for epoch in range(1, args.n_epoch + 1):
-		adjust_learning_rate(optimizer1, alpha_plan, beta1_plan, epoch - 1)
-		adjust_learning_rate(optimizer2, alpha_plan, beta1_plan, epoch - 1)
+		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1)
+		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1)
 
 		train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2 = \
 			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule, epoch, cuda)
@@ -335,16 +327,17 @@ def run_coteaching():
 						'epoch': epoch
 						}, os.path.join(MODEL_DIR, '%s_%s_%s_%.2f_2_%d.pth' % (args.dataset, args.backbone, args.loss_fn, args.keep_rate, epoch)))
 
-	# visualize training log
-	train_log = np.array(train_log)
-	legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
-	epoch_count = range(1, train_log.shape[0] + 1)
-	for i in range(len(legends)):
-		plt.loglog(epoch_count, train_log[:, i])
-	plt.legend(legends)
-	plt.ylabel('loss')
-	plt.xlabel('epochs')
-	plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
+		# visualize training log
+		train_log_data = np.array(train_log)
+		legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
+		epoch_count = range(1, train_log_data.shape[0] + 1)
+		for i in range(len(legends)):
+			plt.plot(epoch_count, train_log_data[:, i])
+		plt.legend(legends)
+		plt.ylabel('loss')
+		plt.xlabel('epochs')
+		plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
+		plt.close()
 
 if __name__ == '__main__':
 	if args.train:
