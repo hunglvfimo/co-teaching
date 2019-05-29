@@ -61,7 +61,7 @@ args = parser.parse_args()
 
 cuda = torch.cuda.is_available()
 # Set up data loaders parameters
-kwargs = {'num_workers': 0, 'pin_memory': True} if cuda else {} #
+kwargs = {'num_workers': 4, 'pin_memory': True} if cuda else {} #
 
 # Seed
 torch.manual_seed(args.seed)
