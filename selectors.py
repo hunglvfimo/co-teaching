@@ -9,7 +9,7 @@ def pdist(vectors):
     distance_matrix = -2 * vectors.mm(torch.t(vectors)) + vectors.pow(2).sum(dim=1).view(1, -1) + vectors.pow(2).sum(dim=1).view(-1, 1)
     return distance_matrix
 
-class TripletSelector:
+class TripletSelector(object):
     """
     Implementation should return indices of anchors, positive and negative samples
     return np array of shape [N_triplets x 3]
