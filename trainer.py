@@ -104,7 +104,7 @@ def train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimize
 
     pbar = tqdm(train_loader)
     for batch_idx, (data, target) in enumerate(pbar):
-        pbar.set_description("[Epoch %d: %d/%d].Kr:=%.2f" % (epoch, batch_idx, len(train_loader), rate_schedule[epoch]))
+        pbar.set_description("[Epoch %d, Kr:=%.2f]." % (epoch, rate_schedule[epoch]))
 
         if not type(data) in (tuple, list):
             data = (data,)
