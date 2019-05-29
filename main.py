@@ -264,7 +264,8 @@ def run_coteaching():
 	if args.batch_sampler == "balanced":
 		train_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
 												n_samples=args.batch_size // n_classes,
-												n_batches=len(train_dataset.targets) * n_classes // args.batch_size,)
+												# n_batches=len(train_dataset.targets) * n_classes // args.batch_size,
+												n_batches=1000,)
 		
 		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
 													n_samples=args.batch_size // n_classes, 
