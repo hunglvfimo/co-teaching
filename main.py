@@ -17,8 +17,7 @@ import matplotlib.pyplot as plt
 
 from models import load_model
 from samplers import BalancedBatchSampler
-from losses import FocalLoss, CoTeachingTripletLoss, CoTeachingLoss, CoTeachingLossPlus
-from selectors import HardestNegativeTripletSelector, RandomNegativeTripletSelector, SemihardNegativeTripletSelector
+from losses import *
 from trainer import fit, train_coteaching, eval_coteaching
 from scheduler import adjust_learning_rate
 from dataset import NoLabelFolder
@@ -37,12 +36,14 @@ parser.add_argument('--augment', help='Add data augmentation to training', actio
 # model params
 parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', default='co_teaching')
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
-parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching+; co_teaching_triplet; co_teaching_triplet+', default="co_teaching")
+parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet;', default="co_teaching")
 parser.add_argument('--use_classes_weight', action='store_true')
 # co-teaching params
 parser.add_argument('--keep_rate', type=float, help = 'Keep rate in each mini-batch. Default: 0.7', default = 0.7)
 parser.add_argument('--num_gradual', type=int, default = 10, help='how many epochs for linear drop rate, can be 5, 10, 15. This parameter is equal to Tk for R(T) in Co-teaching paper.')
 parser.add_argument('--exponent', type = float, default = 1, help='exponent of the forget rate, can be 0.5, 1, 2. This parameter is equal to c in Tc for R(T) in Co-teaching paper.')
+# triplet params
+parser.add_argument('--soft_margin', help='Use soft margin.', action='store_true')
 # training params
 parser.add_argument('--lr', type = float, default = 1e-5)
 parser.add_argument('--eval_freq', type=int, default=10)
@@ -300,21 +301,15 @@ def run_coteaching():
 	if args.loss_fn == "co_teaching":
 		print("Training using CoTeachingLoss")
 		loss_fn = CoTeachingLoss(weight=classes_weights)
-	elif args.loss_fn == "co_teaching+":
-		print("Training using CoTeachingLoss+")
-		loss_fn = CoTeachingLossPlus(weight=classes_weights)
 	elif args.loss_fn == "co_teaching_triplet":
-		print("Training using CoTeachingTripletLoss")
-		loss_fn = CoTeachingTripletLoss(margin=TRIPLET_MARGIN)
-	elif args.loss_fn == "co_teaching_triplet+":
-		print("Training using CoTeachingTripletLoss+")
-		# TODO: Implement CoTeachingTripletLossPlus
-		loss_fn = CoTeachingTripletLoss(margin=TRIPLET_MARGIN)
+		print("Training using CoTeachingTripletLoss")		
+		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin)
+
 
 	train_log = []
 	for epoch in range(1, args.n_epoch + 1):
-		adjust_learning_rate(optimizer1, alpha_plan, beta1_plan, epoch)
-		adjust_learning_rate(optimizer2, alpha_plan, beta1_plan, epoch)
+		adjust_learning_rate(optimizer1, alpha_plan, beta1_plan, epoch - 1)
+		adjust_learning_rate(optimizer2, alpha_plan, beta1_plan, epoch - 1)
 
 		train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2 = \
 			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule, epoch, cuda)

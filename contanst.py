@@ -1,8 +1,6 @@
 import numpy as np
 import os
 
-TRIPLET_MARGIN = 0.1
-
 DATA_DIR = os.path.join('..', '..', 'data', 'processed')
 MODEL_DIR = os.path.join('..', '..', 'models')
 RESULT_DIR = os.path.join('..', '..', 'results')
