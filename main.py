@@ -31,12 +31,14 @@ parser.add_argument('--test', help='Multualy exclusive with --train, --predict.'
 parser.add_argument('--predict', help='Multualy exclusive with --train, --test.', action='store_true')
 # dataset params
 parser.add_argument('--dataset', type=str, help='SAR_8A, SAR_4L, VAIS_RGB, VAIS_IR, VAIS_IR_RGB, ...', default='SAR_8A')
+parser.add_argument('--large_batch', help='Dont Decay the Learning Rate, Increase the Batch Size', action='store_true')
 parser.add_argument('--input_size', type=int, help='Resize input image to input_size. If -1, images is in original size (should be use with SPP layer)', default=112)
 parser.add_argument('--augment', help='Add data augmentation to training', action='store_true')
+parser.add_argument('--num_workers', type=int, help='Number of workers for data loader', default=1)
 # model params
 parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', default='co_teaching')
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
-parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet;', default="co_teaching")
+parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_mining;', default="co_teaching")
 parser.add_argument('--use_classes_weight', action='store_true')
 # co-teaching params
 parser.add_argument('--keep_rate', type=float, help = 'Keep rate in each mini-batch. Default: 0.7', default = 0.7)
@@ -61,7 +63,7 @@ args = parser.parse_args()
 
 cuda = torch.cuda.is_available()
 # Set up data loaders parameters
-kwargs = {'num_workers': 4, 'pin_memory': True} if cuda else {} #
+kwargs = {'num_workers': args.num_workers, 'pin_memory': True} if cuda else {} #
 
 # Seed
 torch.manual_seed(args.seed)
@@ -255,7 +257,7 @@ def run_coteaching():
 
 	return_embedding = False
 	metric_acc = True
-	if args.loss_fn == "co_teaching_triplet" or args.loss_fn == "co_teaching_triplet+": # metric learning
+	if args.loss_fn == "co_mining": # metric learning
 		return_embedding = True # CNN return embedding instead of logit
 		metric_acc = False # Do not evaluate accuracy during training
 		
@@ -293,17 +295,20 @@ def run_coteaching():
 		print("Training using CoTeachingLoss")
 		loss_fn = CoTeachingLoss(weight=classes_weights)
 	elif args.loss_fn == "co_teaching_triplet":
-		print("Training using CoTeachingTripletLoss")		
+		print("Training using CoTeachingTripletLoss")
 		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin)
+	elif args.loss_fn == "co_mining":
+		print("Training using CoMiningLoss")		
+		loss_fn = CoMiningLoss(soft_margin=args.soft_margin)
 
 	lr_scheduler = LrScheduler(args.epoch_decay_start, args.n_epoch, args.lr)
 
 	train_log = []
 	for epoch in range(1, args.n_epoch + 1):
-		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1)
-		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1)
+		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1, args.large_batch)
+		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1, args.large_batch)
+		adjust_batch_size(train_batch_sampler, epoch, args.large_batch)
 
-		adjust_batch_size(train_batch_sampler, epoch)
 
 		train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2 = \
 			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule, epoch, cuda)

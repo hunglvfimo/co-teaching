@@ -2,6 +2,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 from itertools import combinations
 
@@ -56,11 +57,15 @@ def random_hard_negative(loss_values):
     hard_negatives = np.where(loss_values > 0)[0]
     return np.random.choice(hard_negatives) if len(hard_negatives) > 0 else None
 
-
 def semihard_negative(loss_values, margin):
     semihard_negatives = np.where(np.logical_and(loss_values < margin, loss_values > 0))[0]
     return np.random.choice(semihard_negatives) if len(semihard_negatives) > 0 else None
 
+def _apply_margin(p, n, soft_margin):
+    if soft_margin:
+        return F.softplus(p - n)
+    else:
+        return F.relu(p - n + 0.1)
 
 class FunctionNegativeTripletSelector(TripletSelector):
     """
@@ -70,10 +75,12 @@ class FunctionNegativeTripletSelector(TripletSelector):
     and return a negative index for that pair
     """
 
-    def __init__(self, margin, negative_selection_fn, cpu=True):
+    def __init__(self, soft_margin, negative_selection_fn, cpu=True):
         super(FunctionNegativeTripletSelector, self).__init__()
         self.cpu = cpu
-        self.margin = margin
+        
+        self.soft_margin = soft_margin
+
         self.negative_selection_fn = negative_selection_fn
 
     def get_triplets(self, embeddings, labels):
@@ -81,7 +88,7 @@ class FunctionNegativeTripletSelector(TripletSelector):
             embeddings = embeddings.cpu()
         
         distance_matrix = pdist(embeddings)
-        distance_matrix = distance_matrix.cpu()
+        # distance_matrix = distance_matrix.cpu()
 
         labels = labels.cpu().data.numpy()
         triplets = []
@@ -98,31 +105,28 @@ class FunctionNegativeTripletSelector(TripletSelector):
 
             ap_distances = distance_matrix[anchor_positives[:, 0], anchor_positives[:, 1]]
             for anchor_positive, ap_distance in zip(anchor_positives, ap_distances):
-                loss_values = ap_distance - distance_matrix[torch.LongTensor(np.array([anchor_positive[0]])), torch.LongTensor(negative_indices)] + self.margin
-                loss_values = loss_values.data.cpu().numpy()
-                hard_negative = self.negative_selection_fn(loss_values)
+                an_distances = distance_matrix[torch.LongTensor(np.array([anchor_positive[0]])), torch.LongTensor(negative_indices)]
+                loss = _apply_margin(ap_distance, an_distances, self.soft_margin)
+                hard_negative = self.negative_selection_fn(loss.cpu().data.numpy())
                 if hard_negative is not None:
                     hard_negative = negative_indices[hard_negative]
                     triplets.append([anchor_positive[0], anchor_positive[1], hard_negative])
-
-        if len(triplets) == 0:
-            triplets.append([anchor_positive[0], anchor_positive[1], negative_indices[0]])
 
         triplets = np.array(triplets)
 
         return torch.LongTensor(triplets)
 
 
-def HardestNegativeTripletSelector(margin=0.1, cpu=False): return FunctionNegativeTripletSelector(margin=margin,
+def HardestNegativeTripletSelector(soft_margin, cpu=False): return FunctionNegativeTripletSelector(soft_margin=soft_margin,
                                                                                  negative_selection_fn=hardest_negative,
                                                                                  cpu=cpu)
 
 
-def RandomNegativeTripletSelector(margin=0.1, cpu=False): return FunctionNegativeTripletSelector(margin=margin,
+def RandomNegativeTripletSelector(soft_margin, cpu=False): return FunctionNegativeTripletSelector(soft_margin=soft_margin,
                                                                                 negative_selection_fn=random_hard_negative,
                                                                                 cpu=cpu)
 
 
-def SemihardNegativeTripletSelector(margin=0.1, cpu=False): return FunctionNegativeTripletSelector(margin=margin,
+def SemihardNegativeTripletSelector(soft_margin, cpu=False): return FunctionNegativeTripletSelector(soft_margin=soft_margin,
                                                                                   negative_selection_fn=lambda x: semihard_negative(x, margin),
                                                                                   cpu=cpu)

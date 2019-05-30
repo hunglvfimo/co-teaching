@@ -5,7 +5,46 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
 
-from selectors import AllTripletSelector
+from selectors import AllTripletSelector, HardestNegativeTripletSelector
+
+class CoMiningLoss(nn.Module):
+    def __init__(self, soft_margin, size_average=True):
+        self.soft_margin = soft_margin
+        self.size_average = size_average
+
+        super(CoMiningLoss, self).__init__()
+
+        self.hard_batch = HardestNegativeTripletSelector(soft_margin=self.soft_margin)
+        self.all_batch = AllTripletSelector()
+
+    def _triplet_loss(self, emb, triplets):
+        ap_distances = (emb[triplets[:, 0]] - emb[triplets[:, 1]]).pow(2).sum(1)
+        an_distances = (emb[triplets[:, 0]] - emb[triplets[:, 2]]).pow(2).sum(1)
+        
+        if self.soft_margin:
+            loss = F.softplus(ap_distances - an_distances)
+        else:
+            loss = F.relu(ap_distances - an_distances + 0.1)
+        return loss
+    
+    def forward(self, emb1, emb2, targets, keep_rate):
+        all_triplet = self.all_batch.get_triplets(None, targets)
+        hard_triplets1 = self.hard_batch.get_triplets(emb1, targets)
+        hard_triplets2 = self.hard_batch.get_triplets(emb2, targets)
+        if targets.is_cuda:
+            all_triplet = all_triplet.cuda()
+            hard_triplets1 = hard_triplets1.cuda()
+            hard_triplets2 = hard_triplets2.cuda()
+
+        # exchange loss
+        loss_1 = self._triplet_loss(emb1, all_triplet)
+        hard_loss_1 = self._triplet_loss(emb1, hard_triplets2)
+
+        loss_2 = self._triplet_loss(emb2, all_triplet)
+        hard_loss_2 = self._triplet_loss(emb2, hard_triplets1)
+
+        if self.size_average: return hard_loss_1.mean(), hard_loss_2.mean(), loss_1.mean(), loss_2.mean()
+        else: return hard_loss_1.sum(), hard_loss_2.sum(), loss_1.sum(), loss_2.sum()
 
 class CoTeachingTripletLoss(nn.Module):
     def __init__(self, soft_margin, size_average=True):
