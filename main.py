@@ -49,6 +49,7 @@ parser.add_argument('--soft_margin', help='Use soft margin.', action='store_true
 # training params
 parser.add_argument('--lr', type = float, default=3.0)
 parser.add_argument('--n_epoch', type=int, default=100)
+parser.add_argument('--n_batches', type=int, help='This param only used when training co-mining. Dont specified --large_batch', default=100)
 parser.add_argument('--epoch_decay_start', type=int, default=30)
 parser.add_argument('--batch_size', type=int, default=36)
 parser.add_argument('--eval_freq', type=int, default=10)
@@ -266,7 +267,7 @@ def run_coteaching():
 	if args.batch_sampler == "balanced":
 		train_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
 												n_samples=args.batch_size // n_classes,
-												n_batches=len(train_dataset.targets) * n_classes // args.batch_size,)
+												n_batches=args.n_batches,)
 		
 		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
 													n_samples=args.batch_size // n_classes, 
