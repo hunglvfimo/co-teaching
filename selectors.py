@@ -75,7 +75,7 @@ class FunctionNegativeTripletSelector(TripletSelector):
     and return a negative index for that pair
     """
 
-    def __init__(self, soft_margin, negative_selection_fn, cpu=True):
+    def __init__(self, soft_margin, negative_selection_fn, cpu=False):
         super(FunctionNegativeTripletSelector, self).__init__()
         self.cpu = cpu
         
