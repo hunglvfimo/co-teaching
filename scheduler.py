@@ -29,7 +29,6 @@ class LrScheduler(object):
 			param_group['lr'] = self.lr
 			param_group['betas'] = (beta1, 0.999) # Only change beta1
 
-
 def adjust_batch_size(data_loader, epoch, large_batch):
 	if large_batch:
 		if epoch < 30:
