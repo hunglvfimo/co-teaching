@@ -63,11 +63,10 @@ class CoTeachingTripletLoss(nn.Module):
             loss = F.softplus(ap_distances - an_distances)
         else:
             loss = F.relu(ap_distances - an_distances + 0.1)
-        
         return loss
     
     def forward(self, emb1, emb2, targets, keep_rate):
-        triplets = self.triplet_selector.get_triplets(None, targets)
+        triplets = self.triplet_selector.get_triplets(None, targets)        
         if targets.is_cuda:
             triplets = triplets.cuda()
 
