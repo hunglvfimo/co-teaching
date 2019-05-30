@@ -104,8 +104,6 @@ def train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimize
 
     pbar = tqdm(train_loader)
     for batch_idx, (data, target) in enumerate(pbar):
-        pbar.set_description("[Epoch %d, Kr:=%.2f]." % (epoch, rate_schedule[epoch - 1]))
-
         if not type(data) in (tuple, list):
             data = (data,)
         if cuda:
@@ -118,6 +116,8 @@ def train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimize
 
         loss_inputs = (embd_1, embd_2, target, rate_schedule[epoch - 1])
         loss_1, loss_2, total_loss_1, total_loss_2 = loss_fn(*loss_inputs)
+        pbar.set_description("[Epoch %d, Kr:=%.2f] %.3f/%.3f %.3f/%.3f" \
+                                % (epoch, rate_schedule[epoch - 1], loss_1.item(), total_loss_1.item(), loss_2.item(), total_loss_2.item()))
 
         losses_1 += loss_1.item()
         losses_2 += loss_2.item()
