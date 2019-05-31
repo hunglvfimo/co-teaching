@@ -102,7 +102,8 @@ class CoTeachingTripletLoss(nn.Module):
         else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()
 
 class CoTeachingLoss(nn.Module):
-    def __init__(self, weight=None, size_average=True):
+    def __init__(self, weight=None, hard_mining=False, size_average=True):
+        self.hard_mining = hard_mining
         self.weight = weight
         self.size_average = size_average
 
@@ -110,19 +111,28 @@ class CoTeachingLoss(nn.Module):
     
     def forward(self, y_1, y_2, targets, keep_rate):
         loss_1 = F.cross_entropy(y_1, targets, weight=self.weight, reduce=False)
-        ind_1_sorted = np.argsort(loss_1.cpu().data).cuda()
-
         loss_2 = F.cross_entropy(y_2, targets, weight=self.weight, reduce=False)
-        ind_2_sorted = np.argsort(loss_2.cpu().data).cuda()
 
-        num_keep = int(keep_rate * len(targets))
+        loss_1_update = loss_1
+        loss_2_update = loss_2
+        if keep_rate < 1.0:
+            ind_1_sorted = np.argsort(loss_1.cpu().data)
+            ind_2_sorted = np.argsort(loss_2.cpu().data)
+            if self.hard_mining:
+                ind_1_sorted = ind_1_sorted[::-1]
+                ind_2_sorted = ind_2_sorted[::-1]
+                
+            ind_1_sorted = ind_1_sorted.cuda()
+            ind_2_sorted = ind_2_sorted.cuda()
 
-        ind_1_update = ind_1_sorted[:num_keep]
-        ind_2_update = ind_2_sorted[:num_keep]
+            num_keep = int(keep_rate * len(targets))
 
-        # exchange samples
-        loss_1_update = F.cross_entropy(y_1[ind_2_update], targets[ind_2_update], weight=self.weight, reduce=False)
-        loss_2_update = F.cross_entropy(y_2[ind_1_update], targets[ind_1_update], weight=self.weight, reduce=False)
+            ind_1_update = ind_1_sorted[:num_keep]
+            ind_2_update = ind_2_sorted[:num_keep]
+
+            # exchange samples
+            loss_1_update = F.cross_entropy(y_1[ind_2_update], targets[ind_2_update], weight=self.weight, reduce=False)
+            loss_2_update = F.cross_entropy(y_2[ind_1_update], targets[ind_1_update], weight=self.weight, reduce=False)
 
         if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
         else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()

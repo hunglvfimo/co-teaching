@@ -39,6 +39,7 @@ parser.add_argument('--num_workers', type=int, help='Number of workers for data 
 parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', default='co_teaching')
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
 parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_mining;', default="co_teaching")
+parser.add_argument('--hard_mining', help='Can be used with co_teaching and co_teaching_triplet to keep only hard samples instead of easy ones', action='store_true')
 parser.add_argument('--use_classes_weight', action='store_true')
 # co-teaching params
 parser.add_argument('--keep_rate', type=float, help = 'Keep rate in each mini-batch. Default: 0.7', default = 0.7)
@@ -294,10 +295,10 @@ def run_coteaching():
 
 	if args.loss_fn == "co_teaching":
 		print("Training using CoTeachingLoss")
-		loss_fn = CoTeachingLoss(weight=classes_weights)
+		loss_fn = CoTeachingLoss(weight=classes_weights, hard_mining=args.hard_mining)
 	elif args.loss_fn == "co_teaching_triplet":
 		print("Training using CoTeachingTripletLoss")
-		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin)
+		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin, hard_mining=args.hard_mining)
 	elif args.loss_fn == "co_mining":
 		print("Training using CoMiningLoss")		
 		loss_fn = CoMiningLoss(soft_margin=args.soft_margin)
