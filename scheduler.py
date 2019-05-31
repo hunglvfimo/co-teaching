@@ -10,7 +10,7 @@ class LrScheduler(object):
 		self.mom1 = 0.9
 		self.mom2 = 0.1
 
-	def adjust_learning_rate(self, optimizer, epoch, large_batch):
+	def adjust_learning_rate(self, optimizer, epoch, large_batch, optim_type):
 		if large_batch:
 			if epoch == 30 or epoch == 60 or epoch == 80:
 				self.lr = self.lr / 10.0
@@ -27,7 +27,9 @@ class LrScheduler(object):
 
 		for param_group in optimizer.param_groups:
 			param_group['lr'] = self.lr
-			param_group['betas'] = (beta1, 0.999) # Only change beta1
+			
+			if optim_type == "Adam":
+				param_group['betas'] = (beta1, 0.999) # Only change beta1
 
 def adjust_batch_size(data_loader, epoch, large_batch):
 	if large_batch:

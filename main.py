@@ -41,6 +41,7 @@ parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', d
 parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_mining;', default="co_teaching")
 parser.add_argument('--hard_mining', help='Can be used with co_teaching and co_teaching_triplet to keep only hard samples instead of easy ones', action='store_true')
 parser.add_argument('--use_classes_weight', action='store_true')
+parser.add_argument('--optim', help='Optimizer to use: SGD or Adam', default='Adam')
 # co-teaching params
 parser.add_argument('--keep_rate', type=float, help = 'Keep rate in each mini-batch. Default: 0.7', default = 0.7)
 parser.add_argument('--num_gradual', type=int, default = 10, help='how many epochs for linear drop rate, can be 5, 10, 15. This parameter is equal to Tk for R(T) in Co-teaching paper.')
@@ -290,8 +291,12 @@ def run_coteaching():
 		model1.cuda()
 		model2.cuda()
 	
-	optimizer1 = optim.Adam(model1.parameters(), lr=args.lr)
-	optimizer2 = optim.Adam(model2.parameters(), lr=args.lr)
+	if args.optim == "Adam":
+		optimizer1 = optim.Adam(model1.parameters(), lr=args.lr)
+		optimizer2 = optim.Adam(model2.parameters(), lr=args.lr)
+	elif args.optim == "SGD":
+		optimizer1 = optim.SGD(model1.parameters(), momentum=0.8, lr=args.lr)
+		optimizer2 = optim.SGD(model2.parameters(), momentum=0.8, lr=args.lr)
 
 	if args.loss_fn == "co_teaching":
 		print("Training using CoTeachingLoss")
@@ -307,8 +312,9 @@ def run_coteaching():
 
 	train_log = []
 	for epoch in range(1, args.n_epoch + 1):
-		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1, args.large_batch)
-		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1, args.large_batch)
+		lr_scheduler.adjust_learning_rate(optimizer1, epoch - 1, args.large_batch, args.optim)
+		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1, args.large_batch, args.optim)
+
 		adjust_batch_size(train_batch_sampler, epoch, args.large_batch)
 
 
