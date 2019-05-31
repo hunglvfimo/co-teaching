@@ -86,8 +86,8 @@ class CoTeachingTripletLoss(nn.Module):
                 ind_1_sorted = ind_1_sorted[::-1]
                 ind_2_sorted = ind_2_sorted[::-1]
 
-            ind_1_sorted = torch.LongTensor(ind_1_sorted).cuda()
-            ind_2_sorted = torch.LongTensor(ind_2_sorted).cuda()
+            ind_1_sorted = torch.LongTensor(ind_1_sorted.copy()).cuda()
+            ind_2_sorted = torch.LongTensor(ind_2_sorted.copy()).cuda()
 
             num_keep = int(keep_rate * len(all_triplet))
 
