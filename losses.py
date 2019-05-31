@@ -53,7 +53,7 @@ class CoTeachingTripletLoss(nn.Module):
 
         super(CoTeachingTripletLoss, self).__init__()
 
-        self.triplet_selector = AllTripletSelector()
+        self.all_batch = AllTripletSelector()
 
     def _triplet_loss(self, emb, triplets):
         ap_distances = (emb[triplets[:, 0]] - emb[triplets[:, 1]]).pow(2).sum(1)
@@ -66,24 +66,24 @@ class CoTeachingTripletLoss(nn.Module):
         return loss
     
     def forward(self, emb1, emb2, targets, keep_rate):
-        triplets = self.triplet_selector.get_triplets(None, targets)        
+        all_triplet = self.all_batch.get_triplets(None, targets)        
         if targets.is_cuda:
-            triplets = triplets.cuda()
+            all_triplet = all_triplet.cuda()
 
-        loss_1 = self._triplet_loss(emb1, triplets)
+        loss_1 = self._triplet_loss(emb1, all_triplet)
         ind_1_sorted = np.argsort(loss_1.cpu().data).cuda()
 
-        loss_2 = self._triplet_loss(emb2, triplets)
+        loss_2 = self._triplet_loss(emb2, all_triplet)
         ind_2_sorted = np.argsort(loss_2.cpu().data).cuda()
 
-        num_keep = int(keep_rate * len(triplets))
+        num_keep = int(keep_rate * len(all_triplet))
 
         ind_1_update = ind_1_sorted[:num_keep]
         ind_2_update = ind_2_sorted[:num_keep]
 
         # exchange samples
-        loss_1_update = self._triplet_loss(emb1, triplets[ind_2_update])
-        loss_2_update = self._triplet_loss(emb2, triplets[ind_1_update])
+        loss_1_update = self._triplet_loss(emb1, all_triplet[ind_2_update])
+        loss_2_update = self._triplet_loss(emb2, all_triplet[ind_1_update])
 
         if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
         else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()

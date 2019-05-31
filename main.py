@@ -258,7 +258,7 @@ def run_coteaching():
 
 	return_embedding = False
 	metric_acc = True
-	if args.loss_fn == "co_mining": # metric learning
+	if args.loss_fn == "co_mining" or args.loss_fn == "co_teaching_triplet": # metric learning
 		return_embedding = True # CNN return embedding instead of logit
 		metric_acc = False # Do not evaluate accuracy during training
 		
