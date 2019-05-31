@@ -80,8 +80,8 @@ class CoTeachingTripletLoss(nn.Module):
         loss_1_update = loss_1
         loss_2_update = loss_2
         if keep_rate < 1.0:
-            ind_1_sorted = np.argsort(loss_1.cpu().data)
-            ind_2_sorted = np.argsort(loss_2.cpu().data)
+            ind_1_sorted = np.argsort(loss_1.cpu().data.numpy())
+            ind_2_sorted = np.argsort(loss_2.cpu().data.numpy())
             if self.hard_mining:
                 ind_1_sorted = ind_1_sorted[::-1]
                 ind_2_sorted = ind_2_sorted[::-1]
