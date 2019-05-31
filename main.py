@@ -271,7 +271,7 @@ def run_coteaching():
 		
 		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
 													n_samples=args.batch_size // n_classes, 
-													n_batches=50, training=False)
+													n_batches=2, training=False)
 		
 	if train_batch_sampler is not None:
 		train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler, **kwargs)

@@ -11,13 +11,13 @@ class BalancedBatchSampler(BatchSampler):
         n_samples (int): number of sample of each class in each batch
     """
 
-    def __init__(self, labels, n_samples=8, n_batches=100, training=True):
+    def __init__(self, labels, n_samples=8, n_batches=100, is_training=True):
         np.random.seed(2528)
         
         self.n_samples = n_samples
         self.n_batches = n_batches
         
-        self.training = training
+        self.is_training = is_training
         
         self.labels = labels.numpy()
         self.labels_set = list(set(self.labels)) # list labels for samples
@@ -26,7 +26,7 @@ class BalancedBatchSampler(BatchSampler):
 
     def __iter__(self):
         # shuffle dataset after each epoch
-        if self.training:
+        if self.is_training:
             for l in self.labels_set:
                 np.random.shuffle(self.label_to_indices[l]) 
         
