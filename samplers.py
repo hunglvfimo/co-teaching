@@ -12,7 +12,7 @@ class BalancedBatchSampler(BatchSampler):
     """
 
     def __init__(self, labels, n_samples=8, n_batches=100, is_training=True):
-        np.random.seed(2528)
+        np.random.seed(1)
         
         self.n_samples = n_samples
         self.n_batches = n_batches
