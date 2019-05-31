@@ -322,6 +322,18 @@ def run_coteaching():
 			print('Epoch [%d/%d], Train loss1: %.4f/%.4f, Train loss2: %.4f/%.4f, Test accuracy1: %.4F, Test accuracy2: %.4f, Test loss1: %.4f, Test loss2: %.4f' 
 				% (epoch, args.n_epoch, train_loss_1, total_train_loss_1, train_loss_2, total_train_loss_2, test_acc_1, test_acc_2, test_loss_1, test_loss_2))
 
+			# visualize training log
+			train_log_data = np.array(train_log)
+			legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
+			epoch_count = range(1, train_log_data.shape[0] + 1)
+			for i in range(len(legends)):
+				plt.loglog(epoch_count, train_log_data[:, i])
+			plt.legend(legends)
+			plt.ylabel('loss')
+			plt.xlabel('epochs')
+			plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
+			plt.clf()
+
 		if epoch % args.save_freq == 0:
 			torch.save({
 						'model_state_dict': model1.state_dict(),
@@ -334,18 +346,6 @@ def run_coteaching():
 						'optimizer_state_dict': optimizer2.state_dict(),
 						'epoch': epoch
 						}, os.path.join(MODEL_DIR, '%s_%s_%s_%.2f_2_%d.pth' % (args.dataset, args.backbone, args.loss_fn, args.keep_rate, epoch)))
-
-			# visualize training log
-			train_log_data = np.array(train_log)
-			legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
-			epoch_count = range(1, train_log_data.shape[0] + 1)
-			for i in range(len(legends)):
-				plt.loglog(epoch_count, train_log_data[:, i])
-			plt.legend(legends)
-			plt.ylabel('loss')
-			plt.xlabel('epochs')
-			plt.savefig(os.path.join(MODEL_DIR, '%s_%s_%.2f.png' % (args.dataset, args.loss_fn, args.keep_rate)))
-			plt.clf()
 
 if __name__ == '__main__':
 	if args.train:
