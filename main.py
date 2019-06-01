@@ -127,71 +127,42 @@ if args.use_classes_weight:
 	if cuda:
 		classes_weights = classes_weights.cuda()
 
-def run_copredict_triplet():
-	# TODO
-	pass
-
-def run_coeval_triplet():
-	# TODO
-	pass
-
-def run_copredict(topk=30):
+def run_coeval_triplet(prediction_only=False):
 	if args.input_size == -1:
 		# do not resize image. should use with SPP layer
 		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 	else:
 		transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
-	test_dataset = NoLabelFolder(os.path.join(DATA_DIR, args.dataset, "test"),
-							transform=transforms.Compose(transforms_args))
 
-	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
+	if prediction_only:
+		pass
+	else:
+
 
 	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
 	if cuda:
 		model1.cuda()
 		model2.cuda()
-	
+
 	# test
 	with torch.no_grad():
 		model1.eval()
 		model2.eval()
 
-		logit_1 = np.zeros((len(test_loader.dataset), n_classes))
-		logit_2 = np.zeros((len(test_loader.dataset), n_classes))
-
-		k = 0
-		for data in test_loader:
-			if not type(data) in (tuple, list):
-				data = (data,)
-			if cuda:
-				data = tuple(d.cuda() for d in data)
-	        
-			logit_1[k: k + len(data[0])] = F.softmax(model1(*data), dim=-1).data.cpu().numpy()
-			logit_2[k: k + len(data[0])] = F.softmax(model2(*data), dim=-1).data.cpu().numpy()
-
-			k += len(data[0])
-
-		logit = np.maximum(logit_1, logit_2)
-
-		sorted_logit_ind = np.argsort(logit, axis=0)[::-1] # sorted in descendent order
-		for i, label in enumerate(classes):
-			print("--------Top %d samples predicted as %s--------" % (topk, label))
-			topk_ind = sorted_logit_ind[:topk, i]
-
-			# visualize top-k prediction
-			visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind, i],
-							os.path.join(RESULT_DIR, "%s_%s_%s.png" % (args.dataset, args.model1_name, label)),
-							title=label)
-
-def run_coeval():
+def run_coeval(prediction_only=False):
 	if args.input_size == -1:
 		# do not resize image. should use with SPP layer
 		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 	else:
 		transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
-	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
-							transform=transforms.Compose(transforms_args))
+	
+	if prediction_only:
+		test_dataset = NoLabelFolder(os.path.join(DATA_DIR, args.dataset, "test"),
+								transform=transforms.Compose(transforms_args))
+	else:
+		test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
+								transform=transforms.Compose(transforms_args))
 
 	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
 
@@ -222,22 +193,33 @@ def run_coeval():
 			labels[k: k + len(data[0])] = target.numpy()
 
 			k += len(data[0])
-
-		print("Prediction of Model 1")
-		preds_1 = np.argmax(logit_1, axis=1)
-		print(classification_report(labels, preds_1, target_names=classes))
-		print(confusion_matrix(labels, preds_1))
-
-		print("Prediction of Model 2")
-		preds_2 = np.argmax(logit_2, axis=1)
-		print(classification_report(labels, preds_2, target_names=classes))
-		print(confusion_matrix(labels, preds_2))
-
-		print("Joint prediction")
 		logit = np.maximum(logit_1, logit_2)
-		preds = np.argmax(logit, axis=1)
-		print(classification_report(labels, preds, target_names=classes))
-		print(confusion_matrix(labels, preds))
+
+		if prediction_only:
+			sorted_logit_ind = np.argsort(logit, axis=0)[::-1] # sorted in descendent order
+			for i, label in enumerate(classes):
+				print("--------Top %d samples predicted as %s--------" % (topk, label))
+				topk_ind = sorted_logit_ind[:topk, i]
+
+				# visualize top-k prediction
+				visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind, i],
+								os.path.join(RESULT_DIR, "%s_%s_%s.png" % (args.dataset, args.model1_name, label)),
+								title=label)
+		else:
+			print("Prediction of Model 1")
+			preds_1 = np.argmax(logit_1, axis=1)
+			print(classification_report(labels, preds_1, target_names=classes))
+			print(confusion_matrix(labels, preds_1))
+
+			print("Prediction of Model 2")
+			preds_2 = np.argmax(logit_2, axis=1)
+			print(classification_report(labels, preds_2, target_names=classes))
+			print(confusion_matrix(labels, preds_2))
+
+			print("Joint prediction")
+			preds = np.argmax(logit, axis=1)
+			print(classification_report(labels, preds, target_names=classes))
+			print(confusion_matrix(labels, preds))
 
 def run_coteaching():
 	augment_transform_args = []
@@ -360,6 +342,6 @@ if __name__ == '__main__':
 	elif args.test:
 		run_coeval()
 	elif args.predict:
-		run_copredict()
+		run_coeval(prediction_only=True)
 	else:
 		print("Please specify --train, --test, --predict (mutualy exclusive).")
