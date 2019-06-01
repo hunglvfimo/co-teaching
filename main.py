@@ -137,7 +137,7 @@ def run_coeval_triplet(prediction_only=False):
 	if prediction_only:
 		pass
 	else:
-
+		pass
 
 	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
@@ -187,7 +187,7 @@ def run_coeval(prediction_only=False):
 				data = (data,)
 			if cuda:
 				data = tuple(d.cuda() for d in data)
-	        
+
 			logit_1[k: k + len(data[0])] = model1(*data).data.cpu().numpy()
 			logit_2[k: k + len(data[0])] = model2(*data).data.cpu().numpy()
 			labels[k: k + len(data[0])] = target.numpy()
@@ -316,7 +316,7 @@ def run_coteaching():
 			legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
 			epoch_count = range(1, train_log_data.shape[0] + 1)
 			for i in range(len(legends)):
-				plt.loglog(epoch_count, train_log_data[:, i])
+				plt.plot(epoch_count, train_log_data[:, i])
 			plt.legend(legends)
 			plt.ylabel('loss')
 			plt.xlabel('epochs')
