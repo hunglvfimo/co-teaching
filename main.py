@@ -42,7 +42,7 @@ parser.add_argument('--num_workers', type=int, help='Number of workers for data 
 # model params
 parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', default='co_teaching')
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
-parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_mining;', default="co_teaching")
+parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_hardmining;', default="co_teaching")
 parser.add_argument('--hard_mining', help='Can be used with co_teaching and co_teaching_triplet to keep only hard samples instead of easy ones', action='store_true')
 parser.add_argument('--use_classes_weight', action='store_true')
 parser.add_argument('--optim', help='Optimizer to use: SGD or Adam', default='Adam')
@@ -290,9 +290,9 @@ def run_coteaching():
 	elif args.loss_fn == "co_teaching_triplet":
 		print("Training using CoTeachingTripletLoss")
 		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin, hard_mining=args.hard_mining)
-	elif args.loss_fn == "co_mining":
+	elif args.loss_fn == "co_hardmining":
 		print("Training using CoMiningLoss")		
-		loss_fn = CoMiningLoss(soft_margin=args.soft_margin)
+		loss_fn = CoHardMiningLoss(soft_margin=args.soft_margin)
 
 	lr_scheduler = LrScheduler(args.epoch_decay_start, args.n_epoch, args.lr)
 

@@ -7,7 +7,7 @@ from torch.autograd import Variable
 
 from selectors import AllTripletSelector, HardestNegativeTripletSelector
 
-class CoMiningLoss(nn.Module):
+class CoHardMiningLoss(nn.Module):
     def __init__(self, soft_margin, size_average=True):
         self.soft_margin = soft_margin
         self.size_average = size_average
@@ -116,14 +116,14 @@ class CoTeachingLoss(nn.Module):
         loss_1_update = loss_1
         loss_2_update = loss_2
         if keep_rate < 1.0:
-            ind_1_sorted = np.argsort(loss_1.cpu().data)
-            ind_2_sorted = np.argsort(loss_2.cpu().data)
+            ind_1_sorted = np.argsort(loss_1.cpu().data.numpy())
+            ind_2_sorted = np.argsort(loss_2.cpu().data.numpy())
             if self.hard_mining:
                 ind_1_sorted = ind_1_sorted[::-1]
                 ind_2_sorted = ind_2_sorted[::-1]
-                
-            ind_1_sorted = ind_1_sorted.cuda()
-            ind_2_sorted = ind_2_sorted.cuda()
+
+            ind_1_sorted = torch.LongTensor(ind_1_sorted.copy()).cuda()
+            ind_2_sorted = torch.LongTensor(ind_2_sorted.copy()).cuda()
 
             num_keep = int(keep_rate * len(targets))
 
