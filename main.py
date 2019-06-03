@@ -24,6 +24,10 @@ from dataset import NoLabelFolder
 from visualization import visualize_images
 from contanst import *
 
+# Ignore warnings
+import warnings
+warnings.filterwarnings("ignore")
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed', type=int, default=1)
 parser.add_argument('--train', help='Multualy exclusive with --test, --predict. If --model_name1 and --model_name2 are specified, finetuning these model.', action='store_true')
