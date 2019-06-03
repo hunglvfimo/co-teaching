@@ -66,9 +66,9 @@ def load_model(backbone, t_n_classes, return_embedding, pt_model_name=None, pt_n
 				model.load_state_dict(model_state_dict)
 	
 		# change last FC layer to output our number of classes
-		if n_classes != pt_n_classes:
+		if n_classes != t_n_classes:
 			num_ftrs = model.fc.in_features
-			model.fc = nn.Linear(num_ftrs, n_classes)
+			model.fc = nn.Linear(num_ftrs, t_n_classes)
 	
 	return model
 
