@@ -319,7 +319,7 @@ def run_coteaching():
 			legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
 			epoch_count = range(1, train_log_data.shape[0] + 1)
 			for i in range(len(legends)):
-				plt.plot(epoch_count, train_log_data[:, i])
+				plt.loglog(epoch_count, train_log_data[:, i])
 			plt.legend(legends)
 			plt.ylabel('loss')
 			plt.xlabel('epochs')
