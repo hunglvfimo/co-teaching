@@ -224,7 +224,7 @@ def run_coeval(prediction_only=False):
 def run_coteaching():
 	augment_transform_args = []
 	if args.augment:
-		augment_transform_args = [transforms.RandomCrop(512), transforms.RandomHorizontalFlip(),
+		augment_transform_args = [transforms.RandomHorizontalFlip(),
 								transforms.RandomVerticalFlip(), transforms.RandomPerspective(),
 								transforms.RandomRotation(20), transforms.ColorJitter(hue=.05, saturation=.05)]
 	
@@ -298,7 +298,6 @@ def run_coteaching():
 		lr_scheduler.adjust_learning_rate(optimizer2, epoch - 1, args.large_batch, args.optim)
 
 		adjust_batch_size(train_batch_sampler, epoch, args.large_batch)
-
 
 		train_loss_1, train_loss_2, total_train_loss_1, total_train_loss_2 = \
 			train_coteaching(train_loader, loss_fn, model1, optimizer1, model2, optimizer2, rate_schedule, epoch, cuda)
