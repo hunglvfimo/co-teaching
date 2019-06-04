@@ -7,6 +7,47 @@ from torch.autograd import Variable
 
 from selectors import AllTripletSelector, HardestNegativeTripletSelector
 
+class CoTeachingLoss(nn.Module):
+    def __init__(self, weight=None, self_taught=False, hard_mining=False, size_average=True):
+        self.hard_mining = hard_mining
+        self.self_taught = self_taught
+        self.weight = weight
+        self.size_average = size_average
+
+        super(CoTeachingLoss, self).__init__()
+    
+    def forward(self, y_1, y_2, targets, keep_rate):
+        loss_1 = F.cross_entropy(y_1, targets, weight=self.weight, reduce=False)
+        loss_2 = F.cross_entropy(y_2, targets, weight=self.weight, reduce=False)
+
+        loss_1_update = loss_1
+        loss_2_update = loss_2
+        if keep_rate < 1.0:
+            ind_1_sorted = np.argsort(loss_1.cpu().data.numpy())
+            ind_2_sorted = np.argsort(loss_2.cpu().data.numpy())
+            if self.hard_mining:
+                ind_1_sorted = ind_1_sorted[::-1]
+                ind_2_sorted = ind_2_sorted[::-1]
+
+            ind_1_sorted = torch.LongTensor(ind_1_sorted.copy()).cuda()
+            ind_2_sorted = torch.LongTensor(ind_2_sorted.copy()).cuda()
+
+            num_keep = int(keep_rate * len(targets))
+
+            if self.self_taught:
+                ind_1_update = ind_1_sorted[:num_keep]
+                ind_2_update = ind_2_sorted[:num_keep]
+            else:
+                ind_1_update = ind_2_sorted[:num_keep]
+                ind_2_update = ind_1_sorted[:num_keep]
+
+            # exchange samples
+            loss_1_update = F.cross_entropy(y_1[ind_1_update], targets[ind_1_update], weight=self.weight, reduce=False)
+            loss_2_update = F.cross_entropy(y_2[ind_2_update], targets[ind_2_update], weight=self.weight, reduce=False)
+
+        if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
+        else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()
+
 class CoHardMiningLoss(nn.Module):
     def __init__(self, soft_margin, size_average=True):
         self.soft_margin = soft_margin
@@ -97,42 +138,6 @@ class CoTeachingTripletLoss(nn.Module):
             # exchange samples
             loss_1_update = self._triplet_loss(emb1, all_triplet[ind_2_update])
             loss_2_update = self._triplet_loss(emb2, all_triplet[ind_1_update])
-
-        if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
-        else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()
-
-class CoTeachingLoss(nn.Module):
-    def __init__(self, weight=None, hard_mining=False, size_average=True):
-        self.hard_mining = hard_mining
-        self.weight = weight
-        self.size_average = size_average
-
-        super(CoTeachingLoss, self).__init__()
-    
-    def forward(self, y_1, y_2, targets, keep_rate):
-        loss_1 = F.cross_entropy(y_1, targets, weight=self.weight, reduce=False)
-        loss_2 = F.cross_entropy(y_2, targets, weight=self.weight, reduce=False)
-
-        loss_1_update = loss_1
-        loss_2_update = loss_2
-        if keep_rate < 1.0:
-            ind_1_sorted = np.argsort(loss_1.cpu().data.numpy())
-            ind_2_sorted = np.argsort(loss_2.cpu().data.numpy())
-            if self.hard_mining:
-                ind_1_sorted = ind_1_sorted[::-1]
-                ind_2_sorted = ind_2_sorted[::-1]
-
-            ind_1_sorted = torch.LongTensor(ind_1_sorted.copy()).cuda()
-            ind_2_sorted = torch.LongTensor(ind_2_sorted.copy()).cuda()
-
-            num_keep = int(keep_rate * len(targets))
-
-            ind_1_update = ind_1_sorted[:num_keep]
-            ind_2_update = ind_2_sorted[:num_keep]
-
-            # exchange samples
-            loss_1_update = F.cross_entropy(y_1[ind_2_update], targets[ind_2_update], weight=self.weight, reduce=False)
-            loss_2_update = F.cross_entropy(y_2[ind_1_update], targets[ind_1_update], weight=self.weight, reduce=False)
 
         if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
         else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()

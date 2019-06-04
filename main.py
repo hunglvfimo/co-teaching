@@ -44,6 +44,7 @@ parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', defaul
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
 parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_hardmining;', default="co_teaching")
 parser.add_argument('--hard_mining', help='Can be used with co_teaching and co_teaching_triplet to keep only hard samples instead of easy ones', action='store_true')
+parser.add_argument('--self_taught', help='Can be used with co_teaching and co_teaching_triplet.', action='store_true')
 parser.add_argument('--use_classes_weight', action='store_true')
 parser.add_argument('--optim', help='Optimizer to use: SGD or Adam', default='Adam')
 # co-teaching params
