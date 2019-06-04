@@ -287,7 +287,7 @@ def run_coteaching():
 
 	if args.loss_fn == "co_teaching":
 		print("Training using CoTeachingLoss")
-		loss_fn = CoTeachingLoss(weight=classes_weights, hard_mining=args.hard_mining)
+		loss_fn = CoTeachingLoss(weight=classes_weights, self_taught=args.self_taught, hard_mining=args.hard_mining)
 	elif args.loss_fn == "co_teaching_triplet":
 		print("Training using CoTeachingTripletLoss")
 		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin, hard_mining=args.hard_mining)
