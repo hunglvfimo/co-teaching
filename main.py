@@ -58,7 +58,11 @@ parser.add_argument('--lr', type = float, default=3.0)
 parser.add_argument('--n_epoch', type=int, default=100)
 parser.add_argument('--n_batches', type=int, help='This param only used when training co-mining. Dont specified --large_batch', default=100)
 parser.add_argument('--epoch_decay_start', type=int, default=30)
-parser.add_argument('--batch_size', type=int, default=36)
+
+parser.add_argument('--train_batch_size', type=int, default=32)
+parser.add_argument('--test_batch_size', type=int, default=32)
+parser.add_argument('--n_spc', type=int, help="Number of samples per class for each mini batch", default=4)
+
 parser.add_argument('--eval_freq', type=int, default=10)
 parser.add_argument('--save_freq', type=int, default=10)
 # test/finetuning params
@@ -175,7 +179,7 @@ def run_coeval(prediction_only=False):
 		test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
 								transform=transforms.Compose(transforms_args))
 
-	test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
+	test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs) # default
 
 	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
@@ -263,22 +267,22 @@ def run_coteaching():
 	if args.batch_sampler == "balanced":
 		print("Sampler: Balanced sampler")
 		train_batch_sampler = TrainBalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
-												n_classes=args.batch_size // 4,
+												n_classes=args.train_batch_size // args.n_spc,
 												n_batches=args.n_batches,)
 		
 		test_batch_sampler = TestBalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
-													n_classes=args.batch_size // 2,
+													n_classes=args.test_batch_size // args.n_spc,
 													n_batches=50)
 		
 	if train_batch_sampler is not None:
 		train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler, **kwargs)
 	else:
-		train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True, **kwargs) # default
+		train_loader = DataLoader(train_dataset, batch_size=args.train_batch_size, shuffle=True, **kwargs) # default
 	
 	if test_batch_sampler is not None:
 		test_loader = DataLoader(test_dataset, batch_sampler=test_batch_sampler, **kwargs)
 	else:
-		test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False, **kwargs) # default
+		test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs) # default
 
 	model1 = load_model(args.backbone, n_classes, return_embedding, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, return_embedding, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
