@@ -48,12 +48,12 @@ class CoTeachingLoss(nn.Module):
         if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
         else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()
 
-class CoHardMiningLoss(nn.Module):
+class CoHardMiningTripletLoss(nn.Module):
     def __init__(self, soft_margin, size_average=True):
         self.soft_margin = soft_margin
         self.size_average = size_average
 
-        super(CoMiningLoss, self).__init__()
+        super(CoHardMiningTripletLoss, self).__init__()
 
         self.hard_batch = HardestNegativeTripletSelector(soft_margin=self.soft_margin)
         self.all_batch = AllTripletSelector()
@@ -91,7 +91,8 @@ class CoHardMiningLoss(nn.Module):
         else: return hard_loss_1.sum(), hard_loss_2.sum(), loss_1.sum(), loss_2.sum()
 
 class CoTeachingTripletLoss(nn.Module):
-    def __init__(self, soft_margin, hard_mining=False, size_average=True):
+    def __init__(self, self_taught=False, soft_margin=False, hard_mining=False, size_average=True):
+        self.self_taught = self_taught
         self.hard_mining = hard_mining
         self.soft_margin = soft_margin
         self.size_average = size_average
@@ -118,8 +119,6 @@ class CoTeachingTripletLoss(nn.Module):
         loss_1 = self._triplet_loss(emb1, all_triplet)
         loss_2 = self._triplet_loss(emb2, all_triplet)
 
-        loss_1_update = loss_1
-        loss_2_update = loss_2
         if keep_rate < 1.0:
             ind_1_sorted = np.argsort(loss_1.cpu().data.numpy())
             ind_2_sorted = np.argsort(loss_2.cpu().data.numpy())
@@ -132,12 +131,23 @@ class CoTeachingTripletLoss(nn.Module):
 
             num_keep = int(keep_rate * len(all_triplet))
 
-            ind_1_update = ind_1_sorted[:num_keep]
-            ind_2_update = ind_2_sorted[:num_keep]
+            if self.self_taught:
+                ind_1_update = ind_1_sorted[:num_keep]
+                ind_2_update = ind_2_sorted[:num_keep]
+            else:
+                ind_1_update = ind_2_sorted[:num_keep]
+                ind_2_update = ind_1_sorted[:num_keep]
 
             # exchange samples
             loss_1_update = self._triplet_loss(emb1, all_triplet[ind_2_update])
             loss_2_update = self._triplet_loss(emb2, all_triplet[ind_1_update])
+        else:
+            if self.self_taught:
+                loss_1_update = loss_1
+                loss_2_update = loss_2
+            else:
+                loss_1_update = loss_2
+                loss_2_update = loss_1
 
         if self.size_average: return loss_1_update.mean(), loss_2_update.mean(), loss_1.mean(), loss_2.mean()
         else: return loss_1_update.sum(), loss_2_update.sum(), loss_1.sum(), loss_2.sum()

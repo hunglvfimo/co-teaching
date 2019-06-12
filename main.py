@@ -16,7 +16,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from models import load_model
-from samplers import BalancedBatchSampler
+from samplers import TrainBalancedBatchSampler, TestBalancedBatchSampler
 from losses import *
 from trainer import fit, train_coteaching, eval_coteaching
 from scheduler import LrScheduler, adjust_batch_size
@@ -42,7 +42,7 @@ parser.add_argument('--num_workers', type=int, help='Number of workers for data 
 # model params
 parser.add_argument('--backbone', type=str, help='ResNet50, co_teaching', default='co_teaching')
 parser.add_argument('--batch_sampler', type=str, help='balanced, co_teaching', default = 'co_teaching')
-parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_hardmining;', default="co_teaching")
+parser.add_argument('--loss_fn', type=str, help='co_teaching; co_teaching_triplet; co_hardmining', default="co_teaching")
 parser.add_argument('--hard_mining', help='Can be used with co_teaching and co_teaching_triplet to keep only hard samples instead of easy ones', action='store_true')
 parser.add_argument('--self_taught', help='Can be used with co_teaching and co_teaching_triplet.', action='store_true')
 parser.add_argument('--use_classes_weight', action='store_true')
@@ -118,10 +118,16 @@ if args.dataset == "MedEval17":
 	classes_num = NUM_MEDEVAL17
 
 if args.dataset == "SendaiSNS":
-	dataset_mean = MEAN_SendaiSNS
-	dataset_std = STD_SendaiSNS
-	classes = CLASSES_SendaiSNS
-	classes_num = NUM_SendaiSNS
+	dataset_mean = MEAN_SENDAISNS
+	dataset_std = STD_SENDAISNS
+	classes = CLASSES_SENDAISNS
+	classes_num = NUM_SENDAISNS
+
+if args.dataset == "Omiglot":
+	dataset_mean = MEAN_OMIGLOT
+	dataset_std = STD_OMIGLOT
+	classes = CLASSES_OMIGLOT
+	classes_num = NUM_OMIGLOT
 
 n_classes = len(classes)
 
@@ -231,14 +237,14 @@ def run_coteaching():
 	if args.augment:
 		augment_transform_args = [transforms.RandomHorizontalFlip(),
 								transforms.RandomVerticalFlip(), transforms.RandomPerspective(),
-								transforms.RandomRotation(20), transforms.ColorJitter(hue=.05, saturation=.05)]
+								transforms.RandomRotation(20)]
 	
 	transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std)]
 
 	train_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "train"),
 							transform=transforms.Compose(augment_transform_args + transforms_args))
 
-	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
+	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "val"),
 							transform=transforms.Compose(transforms_args))
 
 	# define drop rate schedule
@@ -247,20 +253,22 @@ def run_coteaching():
 
 	return_embedding = False
 	metric_acc = True
-	if args.loss_fn == "co_mining" or args.loss_fn == "co_teaching_triplet": # metric learning
+	if args.loss_fn.endswith("_triplet"): # metric learning
+		print("Learning: Metric learning")
 		return_embedding = True # CNN return embedding instead of logit
 		metric_acc = False # Do not evaluate accuracy during training
 		
 	train_batch_sampler = None
 	test_batch_sampler = None
 	if args.batch_sampler == "balanced":
-		train_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
-												n_samples=args.batch_size // n_classes,
+		print("Sampler: Balanced sampler")
+		train_batch_sampler = TrainBalancedBatchSampler(torch.from_numpy(np.array(train_dataset.targets)),
+												n_classes=args.batch_size // 4,
 												n_batches=args.n_batches,)
 		
-		test_batch_sampler = BalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
-													n_samples=args.batch_size // n_classes, 
-													n_batches=50, is_training=False)
+		test_batch_sampler = TestBalancedBatchSampler(torch.from_numpy(np.array(test_dataset.targets)), 
+													n_classes=args.batch_size // 2,
+													n_batches=50)
 		
 	if train_batch_sampler is not None:
 		train_loader = DataLoader(train_dataset, batch_sampler=train_batch_sampler, **kwargs)
@@ -279,21 +287,21 @@ def run_coteaching():
 		model2.cuda()
 	
 	if args.optim == "Adam":
-		optimizer1 = optim.Adam(model1.parameters(), lr=args.lr)
-		optimizer2 = optim.Adam(model2.parameters(), lr=args.lr)
+		optimizer1 = optim.Adam(model1.parameters(), lr=args.lr, weight_decay=1e-4)
+		optimizer2 = optim.Adam(model2.parameters(), lr=args.lr, weight_decay=1e-4)
 	elif args.optim == "SGD":
-		optimizer1 = optim.SGD(model1.parameters(), momentum=0.8, lr=args.lr)
-		optimizer2 = optim.SGD(model2.parameters(), momentum=0.8, lr=args.lr)
+		optimizer1 = optim.SGD(model1.parameters(), momentum=0.9, lr=args.lr, weight_decay=1e-4)
+		optimizer2 = optim.SGD(model2.parameters(), momentum=0.9, lr=args.lr, weight_decay=1e-4)
 
 	if args.loss_fn == "co_teaching":
-		print("Training using CoTeachingLoss")
+		print("Loss fn: CoTeachingLoss")
 		loss_fn = CoTeachingLoss(weight=classes_weights, self_taught=args.self_taught, hard_mining=args.hard_mining)
 	elif args.loss_fn == "co_teaching_triplet":
-		print("Training using CoTeachingTripletLoss")
-		loss_fn = CoTeachingTripletLoss(soft_margin=args.soft_margin, hard_mining=args.hard_mining)
-	elif args.loss_fn == "co_hardmining":
-		print("Training using CoMiningLoss")		
-		loss_fn = CoHardMiningLoss(soft_margin=args.soft_margin)
+		print("Loss fn: CoTeachingTripletLoss")
+		loss_fn = CoTeachingTripletLoss(self_taught=args.self_taught, soft_margin=args.soft_margin, hard_mining=args.hard_mining)
+	elif args.loss_fn == "co_hardmining_triplet":
+		print("Loss fn: CoMiningLoss")		
+		loss_fn = CoHardMiningTripletLoss(soft_margin=args.soft_margin)
 
 	lr_scheduler = LrScheduler(args.epoch_decay_start, args.n_epoch, args.lr)
 
@@ -318,9 +326,10 @@ def run_coteaching():
 			# visualize training log
 			train_log_data = np.array(train_log)
 			legends = ['train_loss_1', 'train_loss_2', 'total_train_loss_1', 'total_train_loss_2', 'test_loss_1', 'test_loss_2']
+			styles = ['b--', 'r--', 'b-.', 'r-.', 'b-', 'r-']
 			epoch_count = range(1, train_log_data.shape[0] + 1)
 			for i in range(len(legends)):
-				plt.loglog(epoch_count, train_log_data[:, i])
+				plt.loglog(epoch_count, train_log_data[:, i], styles[i])
 			plt.legend(legends)
 			plt.ylabel('loss')
 			plt.xlabel('epochs')
