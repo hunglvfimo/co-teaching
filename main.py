@@ -248,7 +248,7 @@ def run_coteaching():
 	train_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "train"),
 							transform=transforms.Compose(augment_transform_args + transforms_args))
 
-	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
+	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "val"),
 							transform=transforms.Compose(transforms_args))
 
 	# define drop rate schedule
