@@ -56,7 +56,6 @@ class CoHardMiningTripletLoss(nn.Module):
         super(CoHardMiningTripletLoss, self).__init__()
 
         self.hard_batch = HardestNegativeTripletSelector(soft_margin=self.soft_margin)
-        self.all_batch = AllTripletSelector()
 
     def _triplet_loss(self, emb, triplets):
         ap_distances = (emb[triplets[:, 0]] - emb[triplets[:, 1]]).pow(2).sum(1)
@@ -69,26 +68,17 @@ class CoHardMiningTripletLoss(nn.Module):
         return loss
     
     def forward(self, emb1, emb2, targets, keep_rate):
-        all_triplet = self.all_batch.get_triplets(None, targets)
         hard_triplets1 = self.hard_batch.get_triplets(emb1, targets)
         hard_triplets2 = self.hard_batch.get_triplets(emb2, targets)
         if targets.is_cuda:
-            all_triplet = all_triplet.cuda()
             hard_triplets1 = hard_triplets1.cuda()
             hard_triplets2 = hard_triplets2.cuda()
 
-        # exchange loss
-        loss_1 = self._triplet_loss(emb1, all_triplet)
-        loss_2 = self._triplet_loss(emb2, all_triplet)
+        hard_loss_1 = self._triplet_loss(emb1, hard_triplets2)
+        hard_loss_2 = self._triplet_loss(emb2, hard_triplets1)
 
-        hard_loss_1 = loss_1
-        hard_loss_2 = loss_2
-        if keep_rate < 1.0:
-            hard_loss_1 = self._triplet_loss(emb1, hard_triplets2)
-            hard_loss_2 = self._triplet_loss(emb2, hard_triplets1)
-
-        if self.size_average: return hard_loss_1.mean(), hard_loss_2.mean(), loss_1.mean(), loss_2.mean()
-        else: return hard_loss_1.sum(), hard_loss_2.sum(), loss_1.sum(), loss_2.sum()
+        if self.size_average: return hard_loss_1.mean(), hard_loss_2.mean(), hard_loss_1.mean(), hard_loss_2.mean()
+        else: return hard_loss_1.sum(), hard_loss_2.sum(), hard_loss_1.sum(), hard_loss_2.sum()
 
 class CoTeachingTripletLoss(nn.Module):
     def __init__(self, self_taught=False, soft_margin=False, hard_mining=False, size_average=True):
