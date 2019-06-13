@@ -187,7 +187,7 @@ def model_evaluation(model, train_loader, val_loader, test_loader, plot=True, em
 		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0]: train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0], ...], val_labels_otl, classes)
 		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0]:, ...], test_labels_otl, classes)
 
-	clf = KNeighborsClassifier(n_neighbors=5, metric='l2', n_jobs=-1, weights="distance", algorithm="brute")
+	clf = KNeighborsClassifier(n_neighbors=1, metric='l2', n_jobs=-1, weights="distance", algorithm="brute")
 	clf.fit(np.concatenate((train_embeddings_otl, val_embeddings_otl)), np.concatenate((train_labels_otl, val_labels_otl)))
 	y_pred = clf.predict_proba(test_embeddings_otl)
 	return y_pred, test_labels_otl
