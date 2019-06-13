@@ -15,6 +15,9 @@ from sklearn.metrics import confusion_matrix, f1_score, accuracy_score, classifi
 import matplotlib
 import matplotlib.pyplot as plt
 
+from sklearn.manifold import TSNE
+from sklearn.neighbors import KNeighborsClassifier
+
 from models import load_model
 from samplers import TrainBalancedBatchSampler, TestBalancedBatchSampler
 from losses import *
@@ -142,17 +145,71 @@ if args.use_classes_weight:
 	if cuda:
 		classes_weights = classes_weights.cuda()
 
-def run_coeval_triplet(prediction_only=False):
+def plot_embeddings(embeddings, targets, classes, xlim=None, ylim=None):
+	plt.figure(figsize=(10, 10))
+	for i in range(n_classes):
+		inds = np.where(targets==i)[0]
+		plt.scatter(embeddings[inds, 0], embeddings[inds, 1], alpha=0.5, color=colors[i])
+	if xlim:
+		plt.xlim(xlim[0], xlim[1])
+	if ylim:
+		plt.ylim(ylim[0], ylim[1])
+
+	plt.legend(classes)
+
+def extract_embeddings(dataloader, model, embedding_size=2048):
+	with torch.no_grad():
+		model.eval()
+		embeddings = np.zeros((len(dataloader.dataset), embedding_size))
+		labels = np.zeros(len(dataloader.dataset))
+		k = 0
+		for images, target in dataloader:
+			if cuda:
+				images = images.cuda()
+			embeddings[k:k+len(images)] = model.forward(images).data.cpu().numpy()
+			labels[k:k+len(images)] = target.numpy()
+			k += len(images)
+	return embeddings, labels
+
+def model_evaluation(model, train_loader, val_loader, test_loader, plot=True, embedding_size=2048):
+	train_embeddings_otl, train_labels_otl = extract_embeddings(train_loader, model, embedding_size=embedding_size)
+	val_embeddings_otl, val_labels_otl = extract_embeddings(val_loader, model, embedding_size=embedding_size)
+	test_embeddings_otl, test_labels_otl = extract_embeddings(test_loader, model, embedding_size=embedding_size)
+
+	if plot:
+		embeddings_otl = np.concatenate((train_embeddings_otl, val_embeddings_otl, test_embeddings_otl))
+		embeddings_tsne = TSNE(n_components=2).fit_transform(embeddings_otl)
+
+		labels_otl = np.concatenate((train_labels_otl, val_labels_otl, test_labels_otl)) 
+
+		plot_embeddings(embeddings_tsne, labels_otl)
+		plot_embeddings(embeddings_tsne[:train_embeddings_otl.shape[0], ...], train_labels_otl, classes)
+		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0]: train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0], ...], val_labels_otl, classes)
+		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0]:, ...], test_labels_otl, classes)
+
+	clf = KNeighborsClassifier(n_neighbors=1, metric='l2', n_jobs=-1)
+	clf.fit(np.concatenate((train_embeddings_otl, val_embeddings_otl)), np.concatenate((train_labels_otl, val_labels_otl)))
+	y_pred = clf.predict(test_embeddings_otl)
+	print(classification_report(test_labels_otl, y_pred, target_names=classes))
+	print(confusion_matrix(test_labels_otl, y_pred))
+
+def run_coeval_triplet():
 	if args.input_size == -1:
 		# do not resize image. should use with SPP layer
 		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 	else:
 		transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 
-	if prediction_only:
-		pass
-	else:
-		pass
+	train_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "train"),
+								transform=transforms.Compose(transforms_args))
+	val_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "val"),
+								transform=transforms.Compose(transforms_args))
+	test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
+								transform=transforms.Compose(transforms_args))
+
+	train_loader = DataLoader(train_dataset, batch_size=32, shuffle=False, **kwargs) # default
+	val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, **kwargs) # default
+	test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, **kwargs) # default
 
 	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
@@ -160,10 +217,9 @@ def run_coeval_triplet(prediction_only=False):
 		model1.cuda()
 		model2.cuda()
 
-	# test
-	with torch.no_grad():
-		model1.eval()
-		model2.eval()
+	model_evaluation(model1, train_loader, val_loader, test_loader, plot=False, embedding_size=2048)
+	model_evaluation(model2, train_loader, val_loader, test_loader, plot=False, embedding_size=2048)
+		
 
 def run_coeval(prediction_only=False):
 	if args.input_size == -1:
@@ -359,6 +415,7 @@ if __name__ == '__main__':
 	elif args.test:
 		run_coeval()
 	elif args.predict:
-		run_coeval(prediction_only=True)
+		run_coeval_triplet()
+		# run_coeval(prediction_only=True)
 	else:
 		print("Please specify --train, --test, --predict (mutualy exclusive).")

@@ -49,11 +49,13 @@ def load_model(backbone, t_n_classes, return_embedding, pt_model_name=None, pt_n
 			if os.path.isfile(pt_model_path):
 				# yay it exist!
 				_, file_extension = os.path.splitext(pt_model_name)
+				
 				if file_extension == '.pth':
 					checkpoint = torch.load(pt_model_path)
 
 					if type(checkpoint) is dict:
 						model_state_dict = checkpoint['model_state_dict']
+						optim_state_dict = checkpoint['optimizer_state_dict']
 					else:
 						# if pre-trained model is only for inferene, 
 						# then only model state dict is saved
