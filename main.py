@@ -225,7 +225,8 @@ def run_coeval_triplet():
 
 	logit_1, labels = model_evaluation(model1, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
 	logit_2, labels = model_evaluation(model2, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
-
+	logit = np.maximum(logit_1, logit_2)
+	
 	print("Prediction of Model 1")
 	preds_1 = np.argmax(logit_1, axis=1)
 	print(classification_report(labels, preds_1, target_names=classes))
