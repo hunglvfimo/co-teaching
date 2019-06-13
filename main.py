@@ -182,7 +182,7 @@ def model_evaluation(model, train_loader, val_loader, test_loader, plot=True, em
 
 		labels_otl = np.concatenate((train_labels_otl, val_labels_otl, test_labels_otl)) 
 
-		plot_embeddings(embeddings_tsne, labels_otl)
+		plot_embeddings(embeddings_tsne, labels_otl, classes)
 		plot_embeddings(embeddings_tsne[:train_embeddings_otl.shape[0], ...], train_labels_otl, classes)
 		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0]: train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0], ...], val_labels_otl, classes)
 		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0]:, ...], test_labels_otl, classes)
@@ -217,8 +217,15 @@ def run_coeval_triplet():
 		model1.cuda()
 		model2.cuda()
 
-	model_evaluation(model1, train_loader, val_loader, test_loader, plot=True, embedding_size=512)
-	model_evaluation(model2, train_loader, val_loader, test_loader, plot=True, embedding_size=512)
+	if args.backbone == "ResNet18" or args.backbone == "ResNet34":
+		embedding_size = 512
+	elif args.backbone == "ResNet50":
+		embedding_size = 2048
+	else:
+		embedding_size = 128
+
+	model_evaluation(model1, train_loader, val_loader, test_loader, plot=True, embedding_size=embedding_size)
+	model_evaluation(model2, train_loader, val_loader, test_loader, plot=True, embedding_size=embedding_size)
 		
 
 def run_coeval(prediction_only=False):
