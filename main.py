@@ -217,8 +217,8 @@ def run_coeval_triplet():
 		model1.cuda()
 		model2.cuda()
 
-	model_evaluation(model1, train_loader, val_loader, test_loader, plot=False, embedding_size=2048)
-	model_evaluation(model2, train_loader, val_loader, test_loader, plot=False, embedding_size=2048)
+	model_evaluation(model1, train_loader, val_loader, test_loader, plot=True, embedding_size=2048)
+	model_evaluation(model2, train_loader, val_loader, test_loader, plot=True, embedding_size=2048)
 		
 
 def run_coeval(prediction_only=False):
