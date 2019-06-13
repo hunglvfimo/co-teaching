@@ -189,9 +189,8 @@ def model_evaluation(model, train_loader, val_loader, test_loader, plot=True, em
 
 	clf = KNeighborsClassifier(n_neighbors=1, metric='l2', n_jobs=-1)
 	clf.fit(np.concatenate((train_embeddings_otl, val_embeddings_otl)), np.concatenate((train_labels_otl, val_labels_otl)))
-	y_pred = clf.predict(test_embeddings_otl)
-	print(classification_report(test_labels_otl, y_pred, target_names=classes))
-	print(confusion_matrix(test_labels_otl, y_pred))
+	y_pred = clf.predict_proba(test_embeddings_otl)
+	return y_pred, test_labels_otl
 
 def run_coeval_triplet():
 	if args.input_size == -1:
@@ -224,8 +223,23 @@ def run_coeval_triplet():
 	else:
 		embedding_size = 128
 
-	model_evaluation(model1, train_loader, val_loader, test_loader, plot=True, embedding_size=embedding_size)
-	model_evaluation(model2, train_loader, val_loader, test_loader, plot=True, embedding_size=embedding_size)
+	logit_1, labels = model_evaluation(model1, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
+	logit_2, labels = model_evaluation(model2, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
+
+	print("Prediction of Model 1")
+	preds_1 = np.argmax(logit_1, axis=1)
+	print(classification_report(labels, preds_1, target_names=classes))
+	print(confusion_matrix(labels, preds_1))
+
+	print("Prediction of Model 2")
+	preds_2 = np.argmax(logit_2, axis=1)
+	print(classification_report(labels, preds_2, target_names=classes))
+	print(confusion_matrix(labels, preds_2))
+
+	print("Joint prediction")
+	preds = np.argmax(logit, axis=1)
+	print(classification_report(labels, preds, target_names=classes))
+	print(confusion_matrix(labels, preds))
 		
 
 def run_coeval(prediction_only=False):
