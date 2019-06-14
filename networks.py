@@ -59,12 +59,9 @@ class ResNet(nn.Module):
         return logit
     
     def get_embedding(self, x):
-        # x = self.bn0(x)
-        
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        # x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.layer2(x)
@@ -73,7 +70,6 @@ class ResNet(nn.Module):
 
         x = self.avgpool(x)        
        
-        # x = self.flatten(x)
         x = x.view(x.size(0), -1)
 
         x = self.dropout(x)
