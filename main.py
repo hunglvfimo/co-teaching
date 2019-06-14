@@ -317,9 +317,9 @@ def run_coeval(prediction_only=False):
 def run_coteaching():
 	augment_transform_args = []
 	if args.augment:
-		augment_transform_args = [transforms.RandomHorizontalFlip(), transforms.RandomVerticalFlip()]
+		augment_transform_args = [transforms.RandomHorizontalFlip()]
 		if not args.loss_fn.endswith("_triplet"):
-			augment_transform_args += [transforms.RandomPerspective(), transforms.RandomRotation(20)]
+			augment_transform_args += [transforms.RandomVerticalFlip(), transforms.RandomPerspective(), transforms.RandomRotation(20)]
 	
 	transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std)]
 
