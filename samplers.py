@@ -77,10 +77,10 @@ class TestBalancedBatchSampler(BatchSampler):
             mini_batch_classes = np.random.choice(self.labels_set, size=self.P, replace=False) if self.P < len(self.labels_set) else self.labels_set
             for class_ in mini_batch_classes:
                 # select next n_samples from each class
-                indices.extend(self.label_to_indices[class_][used_label_indices_count[class_]: used_label_indices_count[class_] + self.n_samples])
-                used_label_indices_count[class_] += self.n_samples
+                indices.extend(self.label_to_indices[class_][used_label_indices_count[class_]: used_label_indices_count[class_] + self.K])
+                used_label_indices_count[class_] += self.K
                 
-                if used_label_indices_count[class_] + self.n_samples > len(self.label_to_indices[class_]):
+                if used_label_indices_count[class_] + self.K > len(self.label_to_indices[class_]):
                     used_label_indices_count[class_] = 0
             
             self.batches.append(indices)
