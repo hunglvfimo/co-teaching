@@ -12,11 +12,11 @@ class TrainBalancedBatchSampler(BatchSampler):
         n_classes (int): number of class label for each batch. batch_size = n_samples * n_classes
     """
 
-    def __init__(self, labels, n_classes=8, n_batches=100):
+    def __init__(self, labels, K=4, P=8, n_batches=100):
         np.random.seed(1)
         
-        self.n_samples = 4
-        self.n_classes = n_classes
+        self.K = K
+        self.P = P
         self.n_batches = n_batches
                
         self.labels = labels.numpy()
@@ -32,12 +32,13 @@ class TrainBalancedBatchSampler(BatchSampler):
         used_label_indices_count = {label: 0 for label in self.labels_set}        
         for batch in range(self.n_batches):
             indices = []
-            for class_ in np.random.choice(self.labels_set, size=self.n_classes, replace=False):
+            mini_batch_classes = np.random.choice(self.labels_set, size=self.P, replace=False) if self.P < len(self.labels_set) else self.labels_set
+            for class_ in mini_batch_classes:
                 # select next n_samples from each class
-                indices.extend(self.label_to_indices[class_][used_label_indices_count[class_]: used_label_indices_count[class_] + self.n_samples])
-                used_label_indices_count[class_] += self.n_samples
+                indices.extend(self.label_to_indices[class_][used_label_indices_count[class_]: used_label_indices_count[class_] + self.K])
+                used_label_indices_count[class_] += self.K
                 
-                if used_label_indices_count[class_] + self.n_samples > len(self.label_to_indices[class_]):
+                if used_label_indices_count[class_] + self.K > len(self.label_to_indices[class_]):
                     used_label_indices_count[class_] = 0
             
             yield indices
@@ -54,11 +55,11 @@ class TestBalancedBatchSampler(BatchSampler):
         n_classes (int): number of class label for each batch. batch_size = n_samples * n_classes
     """
 
-    def __init__(self, labels, n_classes=8, n_batches=100):
+    def __init__(self, labels, K=4, P=8, n_batches=100):
         np.random.seed(1)
         
-        self.n_samples = 2
-        self.n_classes = n_classes
+        self.K = K
+        self.P = P
         self.n_batches = n_batches
                 
         self.labels = labels.numpy()
@@ -73,7 +74,8 @@ class TestBalancedBatchSampler(BatchSampler):
         self.batches = []
         for batch in range(self.n_batches):
             indices = []
-            for class_ in np.random.choice(self.labels_set, size=self.n_classes, replace=False):
+            mini_batch_classes = np.random.choice(self.labels_set, size=self.P, replace=False) if self.P < len(self.labels_set) else self.labels_set
+            for class_ in mini_batch_classes:
                 # select next n_samples from each class
                 indices.extend(self.label_to_indices[class_][used_label_indices_count[class_]: used_label_indices_count[class_] + self.n_samples])
                 used_label_indices_count[class_] += self.n_samples
