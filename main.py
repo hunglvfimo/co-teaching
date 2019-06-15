@@ -39,7 +39,7 @@ parser.add_argument('--predict', help='Multualy exclusive with --train, --test.'
 # dataset params
 parser.add_argument('--dataset', type=str, help='SAR_8A, SAR_4L, VAIS_RGB, VAIS_IR, VAIS_IR_RGB, ...', default='SAR_8A')
 parser.add_argument('--large_batch', help='Dont Decay the Learning Rate, Increase the Batch Size', action='store_true')
-parser.add_argument('--input_size', type=int, help='Resize input image to input_size. If -1, images is in original size (should be use with SPP layer)', default=112)
+parser.add_argument('--input_size', type=int, nargs='+', help='Resize input image to input_size. If -1, images is in original size (should be use with SPP layer)', default=112)
 parser.add_argument('--augment', help='Add data augmentation to training', action='store_true')
 parser.add_argument('--num_workers', type=int, help='Number of workers for data loader', default=1)
 # model params
@@ -197,7 +197,7 @@ def run_coeval_triplet():
 		# do not resize image. should use with SPP layer
 		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 	else:
-		transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
+		transforms_args = [transforms.Resize((args.input_size[0], args.input_size[1])), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 
 	train_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "train"),
 								transform=transforms.Compose(transforms_args))
@@ -242,13 +242,12 @@ def run_coeval_triplet():
 	print(classification_report(labels, preds, target_names=classes))
 	print(confusion_matrix(labels, preds))
 		
-
 def run_coeval(prediction_only=False):
 	if args.input_size == -1:
 		# do not resize image. should use with SPP layer
 		transforms_args = [transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 	else:
-		transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
+		transforms_args = [transforms.Resize((args.input_size[0], args.input_size[1])), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std),]
 	
 	if prediction_only:
 		test_dataset = NoLabelFolder(os.path.join(DATA_DIR, args.dataset, "test"),
@@ -321,7 +320,7 @@ def run_coteaching():
 		if not args.loss_fn.endswith("_triplet"):
 			augment_transform_args += [transforms.RandomVerticalFlip(), transforms.RandomPerspective(), transforms.RandomRotation(20)]
 	
-	transforms_args = [transforms.Resize((args.input_size, args.input_size)), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std)]
+	transforms_args = [transforms.Resize((args.input_size[0], args.input_size[1])), transforms.ToTensor(), transforms.Normalize(dataset_mean, dataset_std)]
 
 	train_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "train"),
 							transform=transforms.Compose(augment_transform_args + transforms_args))
