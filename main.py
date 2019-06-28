@@ -187,7 +187,7 @@ def model_evaluation(model, train_loader, val_loader, test_loader, plot=True, em
 		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0]: train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0], ...], val_labels_otl, classes)
 		plot_embeddings(embeddings_tsne[train_embeddings_otl.shape[0] + val_embeddings_otl.shape[0]:, ...], test_labels_otl, classes)
 
-	clf = KNeighborsClassifier(n_neighbors=1, metric='l2', n_jobs=-1, weights="distance")
+	clf = KNeighborsClassifier(n_neighbors=6, metric='l2', n_jobs=-1, weights="distance")
 	clf.fit(np.concatenate((train_embeddings_otl, val_embeddings_otl)), np.concatenate((train_labels_otl, val_labels_otl)))
 	y_pred = clf.predict_proba(test_embeddings_otl)
 	return y_pred, test_labels_otl
@@ -216,31 +216,35 @@ def run_coeval_triplet():
 		model1.cuda()
 		model2.cuda()
 
-	if args.backbone == "ResNet18" or args.backbone == "ResNet34":
-		embedding_size = 512
-	elif args.backbone == "ResNet50":
-		embedding_size = 2048
-	else:
-		embedding_size = 128
+	with torch.no_grad():
+		model1.eval()
+		model2.eval()
 
-	logit_1, labels = model_evaluation(model1, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
-	logit_2, labels = model_evaluation(model2, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
-	logit = logit_1 + logit_2
+		if args.backbone == "ResNet18" or args.backbone == "ResNet34":
+			embedding_size = 512
+		elif args.backbone == "ResNet50":
+			embedding_size = 2048
+		else:
+			embedding_size = 128
 
-	print("Prediction of Model 1")
-	preds_1 = np.argmax(logit_1, axis=1)
-	print(classification_report(labels, preds_1, target_names=classes))
-	print(confusion_matrix(labels, preds_1))
+		logit_1, labels = model_evaluation(model1, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
+		logit_2, labels = model_evaluation(model2, train_loader, val_loader, test_loader, plot=False, embedding_size=embedding_size)
+		logit = logit_1 + logit_2
 
-	print("Prediction of Model 2")
-	preds_2 = np.argmax(logit_2, axis=1)
-	print(classification_report(labels, preds_2, target_names=classes))
-	print(confusion_matrix(labels, preds_2))
+		print("Prediction of Model 1")
+		preds_1 = np.argmax(logit_1, axis=1)
+		print(classification_report(labels, preds_1, target_names=classes))
+		print(confusion_matrix(labels, preds_1))
 
-	print("Joint prediction")
-	preds = np.argmax(logit, axis=1)
-	print(classification_report(labels, preds, target_names=classes))
-	print(confusion_matrix(labels, preds))
+		print("Prediction of Model 2")
+		preds_2 = np.argmax(logit_2, axis=1)
+		print(classification_report(labels, preds_2, target_names=classes))
+		print(confusion_matrix(labels, preds_2))
+
+		print("Joint prediction")
+		preds = np.argmax(logit, axis=1)
+		print(classification_report(labels, preds, target_names=classes))
+		print(confusion_matrix(labels, preds))
 		
 def run_coeval(prediction_only=False):
 	if args.input_size == -1:
@@ -256,7 +260,7 @@ def run_coeval(prediction_only=False):
 		test_dataset = ImageFolder(os.path.join(DATA_DIR, args.dataset, "test"),
 								transform=transforms.Compose(transforms_args))
 
-	test_loader = DataLoader(test_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs) # default
+	test_loader = DataLoader(test_dataset, batch_size=4, shuffle=False, **kwargs) # default
 
 	model1 = load_model(args.backbone, n_classes, False, pt_model_name=args.model1_name, pt_n_classes=args.model1_numclasses)
 	model2 = load_model(args.backbone, n_classes, False, pt_model_name=args.model2_name, pt_n_classes=args.model2_numclasses)
@@ -274,24 +278,40 @@ def run_coeval(prediction_only=False):
 		labels = np.zeros(len(test_loader.dataset))
 
 		k = 0
-		for data, target in test_loader:
-			if not type(data) in (tuple, list):
-				data = (data,)
-			if cuda:
-				data = tuple(d.cuda() for d in data)
-
-			logit_1[k: k + len(data[0])] = model1(*data).data.cpu().numpy()
-			logit_2[k: k + len(data[0])] = model2(*data).data.cpu().numpy()
-			labels[k: k + len(data[0])] = target.numpy()
-
-			k += len(data[0])
-		logit = np.maximum(logit_1, logit_2)
-
 		if prediction_only:
-			sorted_logit_ind = np.argsort(logit, axis=0)[::-1] # sorted in descendent order
+			for data in test_loader:
+				if not type(data) in (tuple, list):
+					data = (data,)
+				if cuda:
+					data = tuple(d.cuda() for d in data)
+
+				logit_1[k: k + len(data[0])] = model1(*data).data.cpu().numpy()
+				logit_2[k: k + len(data[0])] = model2(*data).data.cpu().numpy()
+
+				k += len(data[0])
+		else:
+			for data, target in test_loader:
+				if not type(data) in (tuple, list):
+					data = (data,)
+				if cuda:
+					data = tuple(d.cuda() for d in data)
+
+				logit_1[k: k + len(data[0])] = model1(*data).data.cpu().numpy()
+				logit_2[k: k + len(data[0])] = model2(*data).data.cpu().numpy()
+				labels[k: k + len(data[0])] = target.numpy()
+
+				k += len(data[0])
+		
+		logit = np.maximum(logit_1, logit_2)
+		if prediction_only:
+			prediction = np.argmax(logit, axis=1)
 			for i, label in enumerate(classes):
-				print("--------Top %d samples predicted as %s--------" % (topk, label))
-				topk_ind = sorted_logit_ind[:topk, i]
+				print("--------Top %d samples predicted as %s--------" % (30, label))
+				
+				
+				sorted_logit_ind = np.argsort(logit, axis=0)[::-1] # sorted in descendent order
+
+				topk_ind = sorted_logit_ind[:30, i]
 
 				# visualize top-k prediction
 				visualize_images(test_dataset.getfilepath(topk_ind), logit[topk_ind, i],
@@ -438,7 +458,7 @@ if __name__ == '__main__':
 	elif args.test:
 		run_coeval()
 	elif args.predict:
-		run_coeval_triplet()
-		# run_coeval(prediction_only=True)
+		# run_coeval_triplet()
+		run_coeval(prediction_only=True)
 	else:
 		print("Please specify --train, --test, --predict (mutualy exclusive).")
