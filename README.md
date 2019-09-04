@@ -1,4 +1,5 @@
 This repository is forked from https://github.com/bhanML/Co-teaching
+
 Original paper: https://arxiv.org/abs/1804.06872
 
 Co-teaching is originaly developed for classification task in noisy data. We adapt the idea of co-teaching for metric learning task.
